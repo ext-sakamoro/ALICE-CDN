@@ -1,0 +1,15 @@
+[package]
+name = "alice-cdn"
+version = "0.2.0"
+edition = "2021"
+authors = ["Moroya Sakamoto"]
+description = "Decentralized Latency-Optimized Content Delivery - Optimized Edition"
+license = "AGPL-3.0"
+repository = "https://github.com/ext-sakamoro/ALICE-CDN"
+
+[features]
+default = ["std"]
+std = []
+
+[dependencies]
+# Minimal dependencies - fixed-point math is self-implemented
