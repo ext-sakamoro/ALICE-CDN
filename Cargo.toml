@@ -13,3 +13,16 @@ std = []
 
 [dependencies]
 # Minimal dependencies - fixed-point math is self-implemented
+
+[dev-dependencies]
+criterion = "0.5"
+
+[[bench]]
+name = "cdn_bench"
+harness = false
+
+[[example]]
+name = "vivaldi_network"
+
+[[example]]
+name = "content_routing"
