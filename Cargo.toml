@@ -14,6 +14,13 @@ std = []
 [dependencies]
 # Minimal dependencies - fixed-point math is self-implemented
 
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = true
+
 [dev-dependencies]
 criterion = "0.5"
 

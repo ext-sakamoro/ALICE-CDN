@@ -209,25 +209,25 @@ impl VivaldiCoord {
     /// Get x coordinate as Fixed
     #[inline]
     pub fn x(&self) -> Fixed {
-        Fixed((self.inner.data[0] * SCALE) / COORD_SCALE)
+        Fixed(self.inner.data[0] << 4)
     }
 
     /// Get y coordinate as Fixed
     #[inline]
     pub fn y(&self) -> Fixed {
-        Fixed((self.inner.data[1] * SCALE) / COORD_SCALE)
+        Fixed(self.inner.data[1] << 4)
     }
 
     /// Get z coordinate as Fixed
     #[inline]
     pub fn z(&self) -> Fixed {
-        Fixed((self.inner.data[2] * SCALE) / COORD_SCALE)
+        Fixed(self.inner.data[2] << 4)
     }
 
     /// Get height as Fixed
     #[inline]
     pub fn height(&self) -> Fixed {
-        Fixed((self.inner.data[3] * SCALE) / COORD_SCALE)
+        Fixed(self.inner.data[3] << 4)
     }
 
     /// Get error estimate as Fixed
@@ -240,7 +240,7 @@ impl VivaldiCoord {
     #[inline]
     pub fn euclidean_distance(&self, other: &Self) -> Fixed {
         let dist_scaled = self.inner.distance(&other.inner);
-        Fixed(((dist_scaled as i128 * SCALE as i128) / COORD_SCALE as i128) as i64)
+        Fixed(((dist_scaled as i128) << 4) as i64)
     }
 
     /// Predict RTT to another node
@@ -248,7 +248,7 @@ impl VivaldiCoord {
     #[inline]
     pub fn predict_rtt(&self, other: &Self) -> Fixed {
         let rtt_scaled = self.inner.predict_rtt(&other.inner);
-        Fixed(((rtt_scaled as i128 * SCALE as i128) / COORD_SCALE as i128) as i64)
+        Fixed(((rtt_scaled as i128) << 4) as i64)
     }
 
     /// Update coordinate based on measured RTT to a peer
@@ -259,7 +259,7 @@ impl VivaldiCoord {
 
         // Predicted RTT (using fused SIMD) - use i128 to prevent overflow
         let predicted_scaled = self.inner.predict_rtt(&peer.inner);
-        let predicted = Fixed(((predicted_scaled as i128 * SCALE as i128) / COORD_SCALE as i128) as i64);
+        let predicted = Fixed(((predicted_scaled as i128) << 4) as i64);
 
         // Error calculation
         let rtt_error = measured_rtt - predicted;
@@ -284,7 +284,7 @@ impl VivaldiCoord {
 
         // Calculate movement using integer arithmetic
         let neg_error = -rtt_error.0;
-        let delta = (CC.0 * weight.0) / SCALE;
+        let delta = weight.0 >> 2;
 
         // Apply movement for each spatial dimension
         // Convert from SCALE to COORD_SCALE by multiplying by COORD_SCALE/SCALE
