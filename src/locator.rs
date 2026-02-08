@@ -216,6 +216,85 @@ impl ContentLocator {
         ranked.sort_by(|a, b| a.1.cmp(&b.1));
         ranked
     }
+
+    /// Score a node with content-type-aware weight adjustment.
+    ///
+    /// For latency-sensitive types (ASDF, Mesh), `priority_weight` boosts
+    /// distance importance: ASDF (priority=4) weights distance 4× higher
+    /// and hash 4× lower, strongly preferring the closest node.
+    #[cfg(feature = "content_types")]
+    #[inline]
+    pub fn score_node_typed(
+        &self,
+        content_id: ContentId,
+        node_id: NodeId,
+        node_coord: &VivaldiCoord,
+        content_type: crate::content_types::ContentType,
+    ) -> ScoredNode {
+        let hash = mum_hash(content_id, node_id);
+        let hash_normalized = Fixed(((hash >> 32) as i64 * Fixed::ONE.0) >> 32);
+
+        let predicted_rtt = self.local_coord.predict_rtt(node_coord);
+        let min_rtt = Fixed::from_f64(1.0);
+        let distance_score = Fixed::ONE / predicted_rtt.max(min_rtt);
+
+        let priority = content_type.priority_weight() as i64;
+        let eff_hash_weight = Fixed(self.hash_weight.0 / priority.max(1));
+        let eff_dist_weight = Fixed(self.distance_weight.0.saturating_mul(priority));
+
+        let score = eff_hash_weight * hash_normalized + eff_dist_weight * distance_score;
+
+        ScoredNode {
+            id: node_id,
+            score,
+            predicted_rtt,
+            hash_score: hash,
+        }
+    }
+
+    /// Find the best node for the given content type.
+    ///
+    /// Equivalent to `find_best` but adjusts scoring weights based on
+    /// `ContentType::priority_weight()`.
+    #[cfg(feature = "content_types")]
+    pub fn find_best_typed<'a, I>(
+        &self,
+        content_id: ContentId,
+        candidates: I,
+        content_type: crate::content_types::ContentType,
+    ) -> Option<ScoredNode>
+    where
+        I: IntoIterator<Item = (NodeId, &'a VivaldiCoord)>,
+    {
+        candidates
+            .into_iter()
+            .map(|(id, coord)| self.score_node_typed(content_id, id, coord, content_type))
+            .max_by(|a, b| a.score.cmp(&b.score))
+    }
+
+    /// Find top-k nodes using `ContentType::suggested_replicas()` as default k.
+    ///
+    /// ASDF → 5 replicas, Mesh → 3, Texture/Audio/Generic → 2.
+    #[cfg(feature = "content_types")]
+    pub fn find_top_k_typed<'a, I>(
+        &self,
+        content_id: ContentId,
+        candidates: I,
+        content_type: crate::content_types::ContentType,
+    ) -> Vec<ScoredNode>
+    where
+        I: IntoIterator<Item = (NodeId, &'a VivaldiCoord)>,
+    {
+        let k = content_type.suggested_replicas();
+        let mut scored: Vec<_> = candidates
+            .into_iter()
+            .map(|(id, coord)| self.score_node_typed(content_id, id, coord, content_type))
+            .collect();
+
+        scored.sort_by(|a, b| b.score.cmp(&a.score));
+        scored.truncate(k);
+        scored
+    }
 }
 
 /// Indexed Locator with O(log N) spatial search
@@ -358,6 +437,22 @@ impl RendezvousHash {
         nodes
             .into_iter()
             .max_by_key(|&node_id| fnv1a_hash(content_id, node_id))
+    }
+
+    /// Find replicas using `ContentType::suggested_replicas()` for automatic k.
+    ///
+    /// ASDF → 5, Mesh → 3, Texture/Audio/Generic → 2.
+    #[cfg(feature = "content_types")]
+    pub fn find_replicas_typed<I>(
+        content_id: ContentId,
+        nodes: I,
+        content_type: crate::content_types::ContentType,
+    ) -> Vec<NodeId>
+    where
+        I: IntoIterator<Item = NodeId>,
+    {
+        let k = content_type.suggested_replicas();
+        Self::find_replicas(content_id, nodes, k)
     }
 }
 
@@ -525,6 +620,83 @@ mod tests {
         // Each bucket should have roughly 10000/16 = 625
         for &count in &counts {
             assert!(count > 400 && count < 900, "Uneven: {}", count);
+        }
+    }
+
+    #[cfg(feature = "content_types")]
+    mod typed_tests {
+        use super::*;
+        use crate::content_types::ContentType;
+
+        #[test]
+        fn test_typed_routing_prefers_closer_for_asdf() {
+            let local = VivaldiCoord::at(0.0, 0.0, 0.0, 5.0);
+            let locator = ContentLocator::new(local); // default 0.5/0.5 weights
+
+            let close_node = VivaldiCoord::at(1.0, 0.0, 0.0, 2.0);
+            let far_node = VivaldiCoord::at(100.0, 100.0, 0.0, 10.0);
+
+            let nodes = vec![(1u64, &close_node), (2u64, &far_node)];
+
+            // With ASDF (priority=4), distance is boosted 4×
+            let best = locator.find_best_typed(42, nodes, ContentType::Asdf).unwrap();
+            assert_eq!(best.id, 1, "ASDF should pick closest node, got {}", best.id);
+        }
+
+        #[test]
+        fn test_typed_vs_untyped_asdf_boosts_distance() {
+            let local = VivaldiCoord::at(0.0, 0.0, 0.0, 5.0);
+            let locator = ContentLocator::new(local);
+
+            let node_coord = VivaldiCoord::at(10.0, 0.0, 0.0, 5.0);
+
+            let untyped = locator.score_node(42, 1, &node_coord);
+            let typed_asdf = locator.score_node_typed(42, 1, &node_coord, ContentType::Asdf);
+            let typed_generic = locator.score_node_typed(42, 1, &node_coord, ContentType::Generic);
+
+            // Generic (priority=1) should be close to untyped
+            let diff = (typed_generic.score.0 - untyped.score.0).abs();
+            assert!(diff < Fixed::from_f64(0.01).0, "Generic should match untyped");
+
+            // ASDF should have different score (distance boosted)
+            assert_ne!(typed_asdf.score, untyped.score);
+        }
+
+        #[test]
+        fn test_typed_replicas_count() {
+            let nodes: Vec<u64> = (1..=10).collect();
+
+            let asdf_replicas = RendezvousHash::find_replicas_typed(
+                42, nodes.iter().copied(), ContentType::Asdf,
+            );
+            assert_eq!(asdf_replicas.len(), 5, "ASDF should get 5 replicas");
+
+            let mesh_replicas = RendezvousHash::find_replicas_typed(
+                42, nodes.iter().copied(), ContentType::Mesh,
+            );
+            assert_eq!(mesh_replicas.len(), 3, "Mesh should get 3 replicas");
+
+            let generic_replicas = RendezvousHash::find_replicas_typed(
+                42, nodes.iter().copied(), ContentType::Generic,
+            );
+            assert_eq!(generic_replicas.len(), 2, "Generic should get 2 replicas");
+        }
+
+        #[test]
+        fn test_find_top_k_typed_uses_suggested_replicas() {
+            let local = VivaldiCoord::at(0.0, 0.0, 0.0, 5.0);
+            let locator = ContentLocator::new(local);
+
+            let nodes: Vec<(u64, VivaldiCoord)> = (1..=10)
+                .map(|i| (i, VivaldiCoord::at(i as f64 * 5.0, 0.0, 0.0, 3.0)))
+                .collect();
+            let refs: Vec<_> = nodes.iter().map(|(id, c)| (*id, c)).collect();
+
+            let asdf_top = locator.find_top_k_typed(42, refs.clone(), ContentType::Asdf);
+            assert_eq!(asdf_top.len(), 5, "ASDF top-k should return 5");
+
+            let generic_top = locator.find_top_k_typed(42, refs, ContentType::Generic);
+            assert_eq!(generic_top.len(), 2, "Generic top-k should return 2");
         }
     }
 }
