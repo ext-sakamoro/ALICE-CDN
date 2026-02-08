@@ -10,6 +10,7 @@ repository = "https://github.com/ext-sakamoro/ALICE-CDN"
 [features]
 default = ["std"]
 std = []
+content_types = []  # Content type awareness (ASDF, Mesh, Texture, Audio)
 
 [dependencies]
 # Minimal dependencies - fixed-point math is self-implemented

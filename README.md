@@ -240,6 +240,77 @@ alice-cdn = "0.1"
 - [ALICE-Queue](https://github.com/ext-sakamoro/ALICE-Queue) - Deterministic zero-copy message log
 - [ALICE-Auth](https://github.com/ext-sakamoro/ALICE-Auth) - Zero-copy authentication library
 
+## SDF Asset Delivery Network Integration
+
+ALICE-CDN serves as the routing layer in the SDF asset delivery pipeline, achieving **200-800x bandwidth reduction** vs glTF by delivering mathematical descriptions instead of polygon meshes.
+
+```
+Client Request (asset_id + VivaldiCoord)
+    │
+    ▼
+┌──────────────────────────────────────┐
+│  ALICE-CDN (Vivaldi Routing)     ◀── this crate
+│  ・VivaldiCoord → nearest node (RTT)  │
+│  ・IndexedLocator: O(log n + k)       │
+│  ・Rendezvous hash + distance weight  │
+└──────────┬───────────────────────────┘
+           │
+           ▼
+┌──────────────────────────────────────┐
+│  ALICE-Cache (Markov Prefetch)        │
+│  ・SharedOracle: lock-free prediction │
+└──────────┬───────────────────────────┘
+           │ cache miss → origin
+           ▼
+┌──────────────────────────────────────┐
+│  ALICE-SDF (ASDF Binary Format)       │
+│  ・80 bytes (sphere) vs 20 KB (glTF)  │
+└──────────────────────────────────────┘
+```
+
+Related: [ALICE-SDF](https://github.com/ext-sakamoro/ALICE-SDF) | [ALICE-Cache](https://github.com/ext-sakamoro/ALICE-Cache)
+
+## Content Type Awareness (ASDF Detection)
+
+Enable with `--features content_types` for type-aware content routing. ALICE-CDN can detect ASDF binary format from raw bytes and adjust routing priority accordingly.
+
+```toml
+[dependencies]
+alice-cdn = { path = "../ALICE-CDN", features = ["content_types"] }
+```
+
+### Content Types
+
+| Type | Priority | Replicas | Latency Sensitive |
+|------|----------|----------|-------------------|
+| ASDF (3D geometry) | 10 | 3 | Yes |
+| Mesh | 8 | 2 | Yes |
+| Texture | 5 | 2 | No |
+| Audio | 3 | 1 | No |
+| Generic | 1 | 1 | No |
+
+### Usage
+
+```rust
+use alice_cdn::content_types::{ContentType, AsdfMetadata};
+
+// Auto-detect from raw bytes
+let content_type = ContentType::detect(&data);
+println!("Type: {:?}, Priority: {}", content_type, content_type.priority_weight());
+
+// Parse ASDF header metadata (16 bytes)
+if data.len() >= 16 {
+    let header: [u8; 16] = data[..16].try_into().unwrap();
+    if let Some(meta) = AsdfMetadata::parse(&header) {
+        println!("ASDF v{}, {} nodes, CRC32: 0x{:08X}",
+            meta.version, meta.node_count, meta.crc32);
+    }
+}
+
+// Typed content IDs (top 4 bits = type, bottom 60 bits = raw ID)
+let typed_id = alice_cdn::content_types::typed_content_id(raw_id, ContentType::Asdf);
+```
+
 ## License
 
 This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**.

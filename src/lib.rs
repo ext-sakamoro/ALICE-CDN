@@ -91,6 +91,8 @@ pub mod simd;
 pub mod spatial;
 pub mod locator;
 pub mod maglev;
+#[cfg(feature = "content_types")]
+pub mod content_types;
 
 // Re-export main types
 pub use vivaldi::{Fixed, VivaldiCoord, VivaldiSystem};
