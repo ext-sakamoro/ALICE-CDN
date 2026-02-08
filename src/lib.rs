@@ -93,6 +93,10 @@ pub mod locator;
 pub mod maglev;
 #[cfg(feature = "content_types")]
 pub mod content_types;
+#[cfg(feature = "cache")]
+pub mod cache_bridge;
+#[cfg(feature = "analytics")]
+pub mod analytics_bridge;
 
 // Re-export main types
 pub use vivaldi::{Fixed, VivaldiCoord, VivaldiSystem};
