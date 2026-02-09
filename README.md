@@ -311,6 +311,45 @@ if data.len() >= 16 {
 let typed_id = alice_cdn::content_types::typed_content_id(raw_id, ContentType::Asdf);
 ```
 
+## Cross-Crate Bridges
+
+ALICE-CDN connects to other ALICE ecosystem crates via feature-gated bridge modules:
+
+| Bridge | Feature | Target Crate | Description |
+|--------|---------|--------------|-------------|
+| `asp_bridge` | `asp` | [ALICE-Streaming-Protocol](../ALICE-Streaming-Protocol) | ASP packet routing via Vivaldi coordinates + Maglev consistent hashing |
+
+### ASP Bridge (feature: `asp`)
+
+Routes ASP streaming packets to optimal CDN edge nodes using Vivaldi latency prediction and Maglev consistent hashing. Enables latency-aware live video stream delivery.
+
+```toml
+[dependencies]
+alice-cdn = { path = "../ALICE-CDN", features = ["asp"] }
+```
+
+```rust
+use alice_cdn::asp_bridge::{AspStreamRouter, estimate_delivery};
+use alice_cdn::{VivaldiCoord, ContentLocator, MaglevHash};
+
+// Build router with Maglev + Vivaldi
+let nodes = vec![1u64, 2, 3, 4, 5];
+let router = AspStreamRouter::new(nodes.clone(), local_coord);
+
+// Route by stream key
+let primary = router.primary_node(stream_key);
+let replicas = router.replica_nodes(stream_key, 3);
+
+// Find closest replica
+let closest = router.closest_replica(stream_key, 3);
+
+// Route an ASP packet (uses sequence number as key)
+let node = router.route_packet(&asp_packet);
+
+// Estimate delivery cost
+let (hops, latency_ms) = estimate_delivery(&packet, &local_coord, &target_coord);
+```
+
 ## License
 
 This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**.
