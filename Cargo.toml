@@ -13,11 +13,13 @@ std = []
 content_types = []  # Content type awareness (ASDF, Mesh, Texture, Audio)
 cache = ["dep:alice-cache"]      # ALICE-Cache edge-node caching integration
 analytics = ["dep:alice-analytics"]  # ALICE-Analytics delivery metrics
+asp = ["dep:libasp", "std"]  # ALICE-Streaming-Protocol ASP stream routing
 
 [dependencies]
 # ALICE Ecosystem (optional)
 alice-cache = { path = "../ALICE-Cache", optional = true }
 alice-analytics = { path = "../ALICE-Analytics", optional = true, default-features = false, features = ["std"] }
+libasp = { path = "../ALICE-Streaming-Protocol", optional = true, default-features = false }
 
 [profile.release]
 opt-level = 3

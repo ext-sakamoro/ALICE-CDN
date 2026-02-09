@@ -97,6 +97,8 @@ pub mod content_types;
 pub mod cache_bridge;
 #[cfg(feature = "analytics")]
 pub mod analytics_bridge;
+#[cfg(feature = "asp")]
+pub mod asp_bridge;
 
 // Re-export main types
 pub use vivaldi::{Fixed, VivaldiCoord, VivaldiSystem};
