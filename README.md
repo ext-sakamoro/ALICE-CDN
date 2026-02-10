@@ -318,6 +318,7 @@ ALICE-CDN connects to other ALICE ecosystem crates via feature-gated bridge modu
 | Bridge | Feature | Target Crate | Description |
 |--------|---------|--------------|-------------|
 | `asp_bridge` | `asp` | [ALICE-Streaming-Protocol](../ALICE-Streaming-Protocol) | ASP packet routing via Vivaldi coordinates + Maglev consistent hashing |
+| `crypto_bridge` | `crypto` | [ALICE-Crypto](../ALICE-Crypto) | Content encryption for DRM, signed payloads, per-asset key derivation |
 
 ### ASP Bridge (feature: `asp`)
 
