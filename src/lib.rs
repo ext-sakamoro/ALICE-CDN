@@ -101,6 +101,8 @@ pub mod analytics_bridge;
 pub mod asp_bridge;
 #[cfg(feature = "crypto")]
 pub mod crypto_bridge;
+#[cfg(feature = "sdf")]
+pub mod sdf_cdn_bridge;
 
 // Re-export main types
 pub use vivaldi::{Fixed, VivaldiCoord, VivaldiSystem};

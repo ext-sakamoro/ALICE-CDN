@@ -15,6 +15,7 @@ cache = ["dep:alice-cache"]      # ALICE-Cache edge-node caching integration
 analytics = ["dep:alice-analytics"]  # ALICE-Analytics delivery metrics
 asp = ["dep:libasp", "std"]  # ALICE-Streaming-Protocol ASP stream routing
 crypto = ["dep:alice-crypto", "std"]  # ALICE-Crypto content encryption (DRM, signed payloads)
+sdf = ["std"]  # SDF-aware CDN routing (spatial cell → edge node)
 
 [dependencies]
 # ALICE Ecosystem (optional)
