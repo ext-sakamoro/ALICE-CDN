@@ -6,6 +6,7 @@ authors = ["Moroya Sakamoto"]
 description = "Decentralized Latency-Optimized Content Delivery - Optimized Edition"
 license = "AGPL-3.0"
 repository = "https://github.com/ext-sakamoro/ALICE-CDN"
+publish = false
 
 [features]
 default = ["std"]
