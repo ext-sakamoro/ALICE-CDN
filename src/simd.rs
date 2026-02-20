@@ -16,6 +16,9 @@ use core::arch::x86_64::*;
 /// Scale factor for fixed-point (2^16 for coordinate precision)
 const COORD_SCALE: i64 = 1 << 16;
 
+/// Precomputed reciprocal of COORD_SCALE for f64 conversion
+const RCP_COORD_SCALE: f64 = 1.0 / (1u64 << 16) as f64;
+
 /// 4-dimensional coordinate vector [x, y, z, height]
 /// Aligned to 32 bytes for AVX2 / cache line efficiency
 #[repr(C, align(32))]
@@ -33,7 +36,7 @@ impl SimdCoord {
     }
 
     /// Create coordinate from f64 values
-    #[inline]
+    #[inline(always)]
     pub fn from_f64(x: f64, y: f64, z: f64, height: f64) -> Self {
         Self {
             data: [
@@ -54,25 +57,25 @@ impl SimdCoord {
     /// Get x coordinate as f64
     #[inline(always)]
     pub fn x(&self) -> f64 {
-        self.data[0] as f64 / COORD_SCALE as f64
+        self.data[0] as f64 * RCP_COORD_SCALE
     }
 
     /// Get y coordinate as f64
     #[inline(always)]
     pub fn y(&self) -> f64 {
-        self.data[1] as f64 / COORD_SCALE as f64
+        self.data[1] as f64 * RCP_COORD_SCALE
     }
 
     /// Get z coordinate as f64
     #[inline(always)]
     pub fn z(&self) -> f64 {
-        self.data[2] as f64 / COORD_SCALE as f64
+        self.data[2] as f64 * RCP_COORD_SCALE
     }
 
     /// Get height as f64
     #[inline(always)]
     pub fn height(&self) -> f64 {
-        self.data[3] as f64 / COORD_SCALE as f64
+        self.data[3] as f64 * RCP_COORD_SCALE
     }
 
     /// Calculate squared Euclidean distance (no sqrt, for comparisons)
@@ -95,7 +98,7 @@ impl SimdCoord {
 
     /// Calculate Euclidean distance using integer sqrt
     /// Result is in scaled units (divide by COORD_SCALE to get real value)
-    #[inline]
+    #[inline(always)]
     pub fn distance(&self, other: &Self) -> i64 {
         let dx = self.data[0] - other.data[0];
         let dy = self.data[1] - other.data[1];
@@ -117,20 +120,20 @@ impl SimdCoord {
 
     /// Predict RTT to another node
     /// RTT = distance + height_self + height_other
-    #[inline]
+    #[inline(always)]
     pub fn predict_rtt(&self, other: &Self) -> i64 {
         self.distance(other) + self.data[3] + other.data[3]
     }
 
     /// Predict RTT in milliseconds (f64)
-    #[inline]
+    #[inline(always)]
     pub fn predict_rtt_ms(&self, other: &Self) -> f64 {
-        self.predict_rtt(other) as f64 / COORD_SCALE as f64
+        self.predict_rtt(other) as f64 * RCP_COORD_SCALE
     }
 
     /// SIMD-accelerated distance calculation (x86_64 AVX2)
     #[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
-    #[inline]
+    #[inline(always)]
     pub unsafe fn distance_simd(&self, other: &Self) -> i64 {
         // Load coordinates into AVX2 registers
         let a = _mm256_load_si256(self.data.as_ptr() as *const __m256i);
@@ -158,7 +161,7 @@ impl SimdCoord {
     /// Update coordinate based on RTT measurement (Vivaldi spring model)
     ///
     /// Returns the prediction error for adaptive algorithms
-    #[inline]
+    #[inline(always)]
     pub fn update(&mut self, peer: &Self, measured_rtt_scaled: i64, weight: i64) -> i64 {
         let predicted = self.predict_rtt(peer);
         let error = measured_rtt_scaled - predicted;
@@ -196,7 +199,7 @@ impl SimdCoord {
     }
 
     /// Serialize to bytes (32 bytes)
-    #[inline]
+    #[inline(always)]
     pub fn to_bytes(&self) -> [u8; 32] {
         let mut bytes = [0u8; 32];
         for (i, &val) in self.data.iter().enumerate() {
@@ -206,7 +209,7 @@ impl SimdCoord {
     }
 
     /// Deserialize from bytes
-    #[inline]
+    #[inline(always)]
     pub fn from_bytes(bytes: &[u8; 32]) -> Self {
         let mut data = [0i64; 4];
         for i in 0..4 {
@@ -251,7 +254,7 @@ impl Sub for SimdCoord {
 /// Fast integer square root using Newton-Raphson method
 ///
 /// This is branchless-optimized and uses only integer operations.
-#[inline]
+#[inline(always)]
 pub fn isqrt(n: u64) -> u64 {
     if n < 2 {
         return n;
@@ -275,7 +278,7 @@ pub fn isqrt(n: u64) -> u64 {
 
 /// Fast inverse square root approximation (Quake-style)
 /// Returns 1/sqrt(n) scaled by COORD_SCALE
-#[inline]
+#[inline(always)]
 pub fn fast_inv_sqrt(n: i64) -> i64 {
     if n <= 0 {
         return i64::MAX;
@@ -293,7 +296,7 @@ pub fn fast_inv_sqrt(n: i64) -> i64 {
 /// Batch distance calculation for multiple coordinates
 ///
 /// More cache-efficient than individual calls
-#[inline]
+#[inline(always)]
 pub fn batch_distances(origin: &SimdCoord, targets: &[SimdCoord], out: &mut [i64]) {
     debug_assert_eq!(targets.len(), out.len());
 
@@ -303,7 +306,7 @@ pub fn batch_distances(origin: &SimdCoord, targets: &[SimdCoord], out: &mut [i64
 }
 
 /// Find index of minimum distance in batch
-#[inline]
+#[inline(always)]
 pub fn find_nearest(origin: &SimdCoord, targets: &[SimdCoord]) -> Option<usize> {
     if targets.is_empty() {
         return None;

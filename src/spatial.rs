@@ -34,7 +34,7 @@ pub struct AABB {
 
 impl AABB {
     /// Create AABB containing a single point
-    #[inline]
+    #[inline(always)]
     pub fn from_point(coord: &SimdCoord) -> Self {
         Self {
             min: [coord.data[0], coord.data[1], coord.data[2]],
@@ -43,7 +43,7 @@ impl AABB {
     }
 
     /// Expand to contain another point
-    #[inline]
+    #[inline(always)]
     pub fn expand(&mut self, coord: &SimdCoord) {
         self.min[0] = self.min[0].min(coord.data[0]);
         self.min[1] = self.min[1].min(coord.data[1]);
@@ -54,7 +54,7 @@ impl AABB {
     }
 
     /// Get center point
-    #[inline]
+    #[inline(always)]
     pub fn center(&self) -> [i64; 3] {
         [
             (self.min[0] + self.max[0]) / 2,
@@ -64,7 +64,7 @@ impl AABB {
     }
 
     /// Check if point is inside (or on boundary)
-    #[inline]
+    #[inline(always)]
     pub fn contains(&self, coord: &SimdCoord) -> bool {
         coord.data[0] >= self.min[0] && coord.data[0] <= self.max[0] &&
         coord.data[1] >= self.min[1] && coord.data[1] <= self.max[1] &&
@@ -72,7 +72,7 @@ impl AABB {
     }
 
     /// Minimum squared distance from point to AABB
-    #[inline]
+    #[inline(always)]
     pub fn distance_squared(&self, coord: &SimdCoord) -> i64 {
         let mut dist_sq = 0i128;
 
@@ -92,7 +92,7 @@ impl AABB {
     }
 
     /// Get octant index (0-7) for a point relative to center
-    #[inline]
+    #[inline(always)]
     fn octant(&self, coord: &SimdCoord) -> usize {
         let c = self.center();
         let mut idx = 0;
@@ -103,7 +103,7 @@ impl AABB {
     }
 
     /// Get child AABB for given octant
-    #[inline]
+    #[inline(always)]
     fn child_aabb(&self, octant: usize) -> Self {
         let c = self.center();
         let mut child = *self;
@@ -317,13 +317,13 @@ impl SpatialIndex {
     }
 
     /// Get total number of entries
-    #[inline]
+    #[inline(always)]
     pub fn len(&self) -> usize {
         self.count
     }
 
     /// Check if empty
-    #[inline]
+    #[inline(always)]
     pub fn is_empty(&self) -> bool {
         self.count == 0
     }

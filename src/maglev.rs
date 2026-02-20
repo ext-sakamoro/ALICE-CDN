@@ -198,19 +198,19 @@ impl MaglevHash {
     }
 
     /// Get all nodes
-    #[inline]
+    #[inline(always)]
     pub fn nodes(&self) -> &[NodeId] {
         &self.nodes
     }
 
     /// Get table size
-    #[inline]
+    #[inline(always)]
     pub fn table_size(&self) -> usize {
         self.table_size
     }
 
     /// Get memory usage in bytes
-    #[inline]
+    #[inline(always)]
     pub fn memory_usage(&self) -> usize {
         self.table.len() * 2 + self.nodes.len() * 8
     }
@@ -295,13 +295,13 @@ impl WeightedMaglev {
     }
 
     /// Lookup node for key
-    #[inline]
+    #[inline(always)]
     pub fn lookup(&self, key: u64) -> Option<NodeId> {
         self.inner.lookup(key).map(|virtual_id| virtual_id / 1000)
     }
 
     /// Get original weights
-    #[inline]
+    #[inline(always)]
     pub fn weights(&self) -> &[(NodeId, u32)] {
         &self.weights
     }

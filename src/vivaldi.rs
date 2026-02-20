@@ -20,6 +20,9 @@ use core::ops::{Add, Div, Mul, Sub};
 /// Fixed-point scale factor (2^20 = ~1M for microsecond precision)
 const SCALE: i64 = 1 << 20;
 
+/// Precomputed reciprocal of SCALE for f64 conversion
+const RCP_SCALE: f64 = 1.0 / (1u64 << 20) as f64;
+
 /// Coordinate scale (from simd.rs)
 const COORD_SCALE: i64 = 1 << 16;
 
@@ -32,43 +35,43 @@ impl Fixed {
     pub const ONE: Fixed = Fixed(SCALE);
 
     /// Create from integer milliseconds
-    #[inline]
+    #[inline(always)]
     pub fn from_ms(ms: i64) -> Self {
         Fixed(ms * SCALE)
     }
 
     /// Create from microseconds
-    #[inline]
+    #[inline(always)]
     pub fn from_us(us: i64) -> Self {
         Fixed(us * SCALE / 1000)
     }
 
     /// Create from floating point (for initialization only)
-    #[inline]
+    #[inline(always)]
     pub fn from_f64(f: f64) -> Self {
         Fixed((f * SCALE as f64) as i64)
     }
 
     /// Convert to milliseconds
-    #[inline]
+    #[inline(always)]
     pub fn to_ms(self) -> i64 {
         self.0 / SCALE
     }
 
     /// Convert to f64 (for display/debug)
-    #[inline]
+    #[inline(always)]
     pub fn to_f64(self) -> f64 {
-        self.0 as f64 / SCALE as f64
+        self.0 as f64 * RCP_SCALE
     }
 
     /// Absolute value
-    #[inline]
+    #[inline(always)]
     pub fn abs(self) -> Self {
         Fixed(self.0.abs())
     }
 
     /// Square root using Newton-Raphson (integer approximation)
-    #[inline]
+    #[inline(always)]
     pub fn sqrt(self) -> Self {
         if self.0 <= 0 {
             return Fixed::ZERO;
@@ -88,13 +91,13 @@ impl Fixed {
     }
 
     /// Minimum of two values
-    #[inline]
+    #[inline(always)]
     pub fn min(self, other: Self) -> Self {
         Fixed(self.0.min(other.0))
     }
 
     /// Maximum of two values
-    #[inline]
+    #[inline(always)]
     pub fn max(self, other: Self) -> Self {
         Fixed(self.0.max(other.0))
     }
@@ -102,7 +105,7 @@ impl Fixed {
 
 impl Add for Fixed {
     type Output = Self;
-    #[inline]
+    #[inline(always)]
     fn add(self, rhs: Self) -> Self {
         Fixed(self.0 + rhs.0)
     }
@@ -110,7 +113,7 @@ impl Add for Fixed {
 
 impl Sub for Fixed {
     type Output = Self;
-    #[inline]
+    #[inline(always)]
     fn sub(self, rhs: Self) -> Self {
         Fixed(self.0 - rhs.0)
     }
@@ -118,7 +121,7 @@ impl Sub for Fixed {
 
 impl Mul for Fixed {
     type Output = Self;
-    #[inline]
+    #[inline(always)]
     fn mul(self, rhs: Self) -> Self {
         // Scale down after multiplication to maintain precision
         Fixed(((self.0 as i128 * rhs.0 as i128) / SCALE as i128) as i64)
@@ -127,7 +130,7 @@ impl Mul for Fixed {
 
 impl Div for Fixed {
     type Output = Self;
-    #[inline]
+    #[inline(always)]
     fn div(self, rhs: Self) -> Self {
         if rhs.0 == 0 {
             return Fixed(i64::MAX); // Avoid division by zero
@@ -165,7 +168,7 @@ pub struct VivaldiCoord {
 
 impl VivaldiCoord {
     /// Create new coordinate at origin with default height
-    #[inline]
+    #[inline(always)]
     pub fn new() -> Self {
         Self {
             inner: SimdCoord::from_f64(0.0, 0.0, 0.0, 5.0),
@@ -175,7 +178,7 @@ impl VivaldiCoord {
     }
 
     /// Create coordinate at specific position
-    #[inline]
+    #[inline(always)]
     pub fn at(x: f64, y: f64, z: f64, height: f64) -> Self {
         Self {
             inner: SimdCoord::from_f64(x, y, z, height),
@@ -185,7 +188,7 @@ impl VivaldiCoord {
     }
 
     /// Create from raw SimdCoord
-    #[inline]
+    #[inline(always)]
     pub fn from_simd(coord: SimdCoord) -> Self {
         Self {
             inner: coord,
@@ -207,37 +210,37 @@ impl VivaldiCoord {
     }
 
     /// Get x coordinate as Fixed
-    #[inline]
+    #[inline(always)]
     pub fn x(&self) -> Fixed {
         Fixed(self.inner.data[0] << 4)
     }
 
     /// Get y coordinate as Fixed
-    #[inline]
+    #[inline(always)]
     pub fn y(&self) -> Fixed {
         Fixed(self.inner.data[1] << 4)
     }
 
     /// Get z coordinate as Fixed
-    #[inline]
+    #[inline(always)]
     pub fn z(&self) -> Fixed {
         Fixed(self.inner.data[2] << 4)
     }
 
     /// Get height as Fixed
-    #[inline]
+    #[inline(always)]
     pub fn height(&self) -> Fixed {
         Fixed(self.inner.data[3] << 4)
     }
 
     /// Get error estimate as Fixed
-    #[inline]
+    #[inline(always)]
     pub fn error(&self) -> Fixed {
         Fixed(self.error)
     }
 
     /// Calculate Euclidean distance (excluding height)
-    #[inline]
+    #[inline(always)]
     pub fn euclidean_distance(&self, other: &Self) -> Fixed {
         let dist_scaled = self.inner.distance(&other.inner);
         Fixed(((dist_scaled as i128) << 4) as i64)
@@ -245,7 +248,7 @@ impl VivaldiCoord {
 
     /// Predict RTT to another node
     /// RTT = Euclidean_Distance + Height_A + Height_B
-    #[inline]
+    #[inline(always)]
     pub fn predict_rtt(&self, other: &Self) -> Fixed {
         let rtt_scaled = self.inner.predict_rtt(&other.inner);
         Fixed(((rtt_scaled as i128) << 4) as i64)
@@ -308,7 +311,7 @@ impl VivaldiCoord {
     }
 
     /// Inflate height based on load (for back-pressure)
-    #[inline]
+    #[inline(always)]
     pub fn apply_load_factor(&self, load: f64) -> Self {
         let load_penalty = (load * 50.0 * COORD_SCALE as f64) as i64;
         let mut result = *self;
@@ -369,13 +372,13 @@ impl VivaldiSystem {
     }
 
     /// Predict RTT to a remote node
-    #[inline]
+    #[inline(always)]
     pub fn predict_rtt(&self, remote: &VivaldiCoord) -> Fixed {
         self.local.predict_rtt(remote)
     }
 
     /// Get local coordinate
-    #[inline]
+    #[inline(always)]
     pub fn get_coord(&self) -> &VivaldiCoord {
         &self.local
     }
