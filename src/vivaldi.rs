@@ -80,7 +80,7 @@ impl Fixed {
         // Scale up for precision before sqrt, then scale result
         let scaled = self.0 as u128 * SCALE as u128;
         let mut x = scaled;
-        let mut y = (x + 1) / 2;
+        let mut y = x.div_ceil(2);
 
         while y < x {
             x = y;
@@ -144,7 +144,6 @@ impl Div for Fixed {
 const MIN_HEIGHT: Fixed = Fixed(SCALE / 1000); // 0.001 ms
 const MAX_MOVEMENT: Fixed = Fixed(SCALE * 100); // 100 ms
 const CE: Fixed = Fixed(SCALE / 4); // 0.25 - error weight
-const CC: Fixed = Fixed(SCALE / 4); // 0.25 - coordinate weight
 
 /// 3D Vivaldi Coordinate + Height (Fused with SimdCoord)
 ///
@@ -275,7 +274,7 @@ impl VivaldiCoord {
 
         // Update local error estimate
         self.error = (relative_error * CE * weight + self_error * (Fixed::ONE - CE * weight)).0;
-        self.error = self.error.max(SCALE / 100).min(SCALE);
+        self.error = self.error.clamp(SCALE / 100, SCALE);
 
         // Distance for unit vector calculation
         let dist = self.inner.distance(&peer.inner);

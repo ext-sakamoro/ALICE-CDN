@@ -109,12 +109,12 @@ impl MaglevHash {
         // Fill the table
         let mut filled = 0;
         while filled < m {
-            for i in 0..n {
+            for (i, param) in params.iter_mut().enumerate().take(n) {
                 // Find next unfilled slot for this node
                 loop {
                     // Compute slot on-the-fly instead of looking up in permutation table
-                    let slot = (params[i].offset + params[i].next * params[i].skip) % m;
-                    params[i].next += 1;
+                    let slot = (param.offset + param.next * param.skip) % m;
+                    param.next += 1;
 
                     if self.table[slot] == EMPTY {
                         self.table[slot] = i as u16;
@@ -123,7 +123,7 @@ impl MaglevHash {
                     }
 
                     // Safety: next will eventually find a slot (M is prime, skip is coprime)
-                    if params[i].next >= m {
+                    if param.next >= m {
                         break;
                     }
                 }
