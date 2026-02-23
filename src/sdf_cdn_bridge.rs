@@ -7,8 +7,8 @@
 //!
 //! Author: Moroya Sakamoto
 
+use crate::locator::{ContentId, ContentLocator, NodeId};
 use crate::maglev::MaglevHash;
-use crate::locator::{ContentLocator, NodeId, ContentId};
 use crate::vivaldi::VivaldiCoord;
 
 /// Spatial cell identifier (from ALICE-DB Morton code)
@@ -35,11 +35,7 @@ impl SdfCdnRouter {
     /// * `edge_nodes` - List of edge node IDs
     /// * `local_coord` - Vivaldi coordinate of the requesting client/gateway
     /// * `replica_count` - Number of replicas per spatial cell
-    pub fn new(
-        edge_nodes: Vec<NodeId>,
-        local_coord: VivaldiCoord,
-        replica_count: usize,
-    ) -> Self {
+    pub fn new(edge_nodes: Vec<NodeId>, local_coord: VivaldiCoord, replica_count: usize) -> Self {
         let maglev = MaglevHash::new(edge_nodes);
         let locator = ContentLocator::new(local_coord);
 
@@ -70,11 +66,11 @@ impl SdfCdnRouter {
             return self.route_sdf_request(spatial_cell);
         }
 
-        let refs: Vec<(NodeId, &VivaldiCoord)> = node_coords.iter()
-            .map(|(id, coord)| (*id, coord))
-            .collect();
+        let refs: Vec<(NodeId, &VivaldiCoord)> =
+            node_coords.iter().map(|(id, coord)| (*id, coord)).collect();
 
-        self.locator.find_best(spatial_cell as ContentId, refs)
+        self.locator
+            .find_best(spatial_cell as ContentId, refs)
             .map(|scored| scored.id)
     }
 
@@ -86,11 +82,11 @@ impl SdfCdnRouter {
         spatial_cell: SpatialCell,
         node_coords: &[(NodeId, VivaldiCoord)],
     ) -> Vec<NodeId> {
-        let refs: Vec<(NodeId, &VivaldiCoord)> = node_coords.iter()
-            .map(|(id, coord)| (*id, coord))
-            .collect();
+        let refs: Vec<(NodeId, &VivaldiCoord)> =
+            node_coords.iter().map(|(id, coord)| (*id, coord)).collect();
 
-        self.locator.find_top_k(spatial_cell as ContentId, refs, self.replica_count)
+        self.locator
+            .find_top_k(spatial_cell as ContentId, refs, self.replica_count)
             .into_iter()
             .map(|scored| scored.id)
             .collect()
@@ -105,7 +101,10 @@ impl SdfCdnRouter {
 
         for &cell in cells {
             if let Some(node) = self.route_sdf_request(cell) {
-                groups.entry(node).or_insert_with(|| Vec::with_capacity(cells.len() / 4)).push(cell);
+                groups
+                    .entry(node)
+                    .or_insert_with(|| Vec::with_capacity(cells.len() / 4))
+                    .push(cell);
             }
         }
 

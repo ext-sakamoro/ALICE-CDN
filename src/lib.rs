@@ -86,41 +86,46 @@
 #[cfg(not(feature = "std"))]
 extern crate alloc;
 
-pub mod vivaldi;
-pub mod simd;
-pub mod spatial;
-pub mod locator;
-pub mod maglev;
-#[cfg(feature = "content_types")]
-pub mod content_types;
-#[cfg(feature = "cache")]
-pub mod cache_bridge;
 #[cfg(feature = "analytics")]
 pub mod analytics_bridge;
 #[cfg(feature = "asp")]
 pub mod asp_bridge;
+#[cfg(feature = "cache")]
+pub mod cache_bridge;
+#[cfg(feature = "content_types")]
+pub mod content_types;
 #[cfg(feature = "crypto")]
 pub mod crypto_bridge;
+pub mod locator;
+pub mod maglev;
 #[cfg(feature = "sdf")]
 pub mod sdf_cdn_bridge;
+pub mod simd;
+pub mod spatial;
+pub mod vivaldi;
 
 // Re-export main types
-pub use vivaldi::{Fixed, VivaldiCoord, VivaldiSystem};
-pub use simd::{SimdCoord, isqrt, batch_distances, find_nearest};
-pub use spatial::{SpatialIndex, SpatialEntry, AABB};
 pub use locator::{ContentId, ContentLocator, IndexedLocator, NodeId, RendezvousHash, ScoredNode};
-pub use maglev::{DistributionStats, MaglevHash, WeightedMaglev, StaticMaglev, DEFAULT_TABLE_SIZE, SMALL_TABLE_SIZE};
+pub use maglev::{
+    DistributionStats, MaglevHash, StaticMaglev, WeightedMaglev, DEFAULT_TABLE_SIZE,
+    SMALL_TABLE_SIZE,
+};
+pub use simd::{batch_distances, find_nearest, isqrt, SimdCoord};
+pub use spatial::{SpatialEntry, SpatialIndex, AABB};
+pub use vivaldi::{Fixed, VivaldiCoord, VivaldiSystem};
 
 /// Library version
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// Prelude for convenient imports
 pub mod prelude {
+    pub use crate::locator::{
+        ContentId, ContentLocator, IndexedLocator, NodeId, RendezvousHash, ScoredNode,
+    };
+    pub use crate::maglev::{MaglevHash, StaticMaglev, WeightedMaglev};
+    pub use crate::simd::{isqrt, SimdCoord};
+    pub use crate::spatial::{SpatialEntry, SpatialIndex};
     pub use crate::vivaldi::{Fixed, VivaldiCoord, VivaldiSystem};
-    pub use crate::simd::{SimdCoord, isqrt};
-    pub use crate::spatial::{SpatialIndex, SpatialEntry};
-    pub use crate::locator::{ContentId, ContentLocator, IndexedLocator, NodeId, RendezvousHash, ScoredNode};
-    pub use crate::maglev::{MaglevHash, WeightedMaglev, StaticMaglev};
 }
 
 #[cfg(test)]

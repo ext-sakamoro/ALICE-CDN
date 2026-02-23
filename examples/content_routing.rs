@@ -53,7 +53,12 @@ fn main() {
     let mut sorted: Vec<_> = counts.iter().collect();
     sorted.sort_by_key(|(node, _)| **node);
     for (node, count) in sorted {
-        println!("  Node {:>3}: {:>5} keys ({:.1}%)", node, count, *count as f64 / 100.0);
+        println!(
+            "  Node {:>3}: {:>5} keys ({:.1}%)",
+            node,
+            count,
+            *count as f64 / 100.0
+        );
     }
 
     // --- Rendezvous Hashing ---

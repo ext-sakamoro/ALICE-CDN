@@ -32,7 +32,9 @@ impl SimdCoord {
     /// Create new coordinate at origin
     #[inline(always)]
     pub const fn new() -> Self {
-        Self { data: [0, 0, 0, COORD_SCALE] } // Default height = 1.0
+        Self {
+            data: [0, 0, 0, COORD_SCALE],
+        } // Default height = 1.0
     }
 
     /// Create coordinate from f64 values
@@ -89,9 +91,8 @@ impl SimdCoord {
         // Use i128 to prevent overflow, then scale down
         // dx is in SCALE units, so dx^2 is in SCALE^2 units
         // We want result in SCALE units, so divide by SCALE
-        let sq = (dx as i128 * dx as i128
-                + dy as i128 * dy as i128
-                + dz as i128 * dz as i128) / COORD_SCALE as i128;
+        let sq = (dx as i128 * dx as i128 + dy as i128 * dy as i128 + dz as i128 * dz as i128)
+            / COORD_SCALE as i128;
 
         sq as i64
     }
@@ -105,9 +106,7 @@ impl SimdCoord {
         let dz = self.data[2] - other.data[2];
 
         // Compute sum of squares in i128 to prevent overflow
-        let sum_sq = dx as i128 * dx as i128
-                   + dy as i128 * dy as i128
-                   + dz as i128 * dz as i128;
+        let sum_sq = dx as i128 * dx as i128 + dy as i128 * dy as i128 + dz as i128 * dz as i128;
 
         if sum_sq <= 0 {
             return 0;
@@ -151,9 +150,8 @@ impl SimdCoord {
         let dy = result[1];
         let dz = result[2];
 
-        let sq = (dx as i128 * dx as i128
-                + dy as i128 * dy as i128
-                + dz as i128 * dz as i128) / COORD_SCALE as i128;
+        let sq = (dx as i128 * dx as i128 + dy as i128 * dy as i128 + dz as i128 * dz as i128)
+            / COORD_SCALE as i128;
 
         isqrt(sq as u64) as i64
     }
@@ -184,7 +182,7 @@ impl SimdCoord {
             let diff = peer.data[i] - self.data[i];
             // (neg_error * diff * weight) / (dist * COORD_SCALE)
             let movement = (neg_error as i128 * diff as i128 * weight as i128)
-                         / (dist as i128 * COORD_SCALE as i128);
+                / (dist as i128 * COORD_SCALE as i128);
 
             // Clamp movement to prevent oscillation
             let clamped = movement.clamp(-COORD_SCALE as i128 * 10, COORD_SCALE as i128 * 10);
@@ -203,7 +201,7 @@ impl SimdCoord {
     pub fn to_bytes(&self) -> [u8; 32] {
         let mut bytes = [0u8; 32];
         for (i, &val) in self.data.iter().enumerate() {
-            bytes[i*8..(i+1)*8].copy_from_slice(&val.to_le_bytes());
+            bytes[i * 8..(i + 1) * 8].copy_from_slice(&val.to_le_bytes());
         }
         bytes
     }
@@ -213,7 +211,7 @@ impl SimdCoord {
     pub fn from_bytes(bytes: &[u8; 32]) -> Self {
         let mut data = [0i64; 4];
         for i in 0..4 {
-            data[i] = i64::from_le_bytes(bytes[i*8..(i+1)*8].try_into().unwrap());
+            data[i] = i64::from_le_bytes(bytes[i * 8..(i + 1) * 8].try_into().unwrap());
         }
         Self { data }
     }

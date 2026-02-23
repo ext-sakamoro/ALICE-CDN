@@ -3,7 +3,7 @@
 //! **Algorithm**: Simplified Octree with linear scan for small buckets.
 //!
 //! **Scorched Earth Optimizations**:
-//! - **u32 indices**: [u32; 8] = 32 bytes vs [Option<usize>; 8] = 128 bytes (4x smaller)
+//! - **u32 indices**: `[u32; 8]` = 32 bytes vs `[Option<usize>; 8]` = 128 bytes (4x smaller)
 //! - **Flat storage**: All nodes in single Vec, cache-friendly
 //! - **Stack traversal**: No recursion, no heap allocation during search
 //! - **Bucket cutoff**: Small groups (≤16) use linear scan
@@ -66,9 +66,12 @@ impl AABB {
     /// Check if point is inside (or on boundary)
     #[inline(always)]
     pub fn contains(&self, coord: &SimdCoord) -> bool {
-        coord.data[0] >= self.min[0] && coord.data[0] <= self.max[0] &&
-        coord.data[1] >= self.min[1] && coord.data[1] <= self.max[1] &&
-        coord.data[2] >= self.min[2] && coord.data[2] <= self.max[2]
+        coord.data[0] >= self.min[0]
+            && coord.data[0] <= self.max[0]
+            && coord.data[1] >= self.min[1]
+            && coord.data[1] <= self.max[1]
+            && coord.data[2] >= self.min[2]
+            && coord.data[2] <= self.max[2]
     }
 
     /// Minimum squared distance from point to AABB
@@ -96,9 +99,15 @@ impl AABB {
     fn octant(&self, coord: &SimdCoord) -> usize {
         let c = self.center();
         let mut idx = 0;
-        if coord.data[0] >= c[0] { idx |= 1; }
-        if coord.data[1] >= c[1] { idx |= 2; }
-        if coord.data[2] >= c[2] { idx |= 4; }
+        if coord.data[0] >= c[0] {
+            idx |= 1;
+        }
+        if coord.data[1] >= c[1] {
+            idx |= 2;
+        }
+        if coord.data[2] >= c[2] {
+            idx |= 4;
+        }
         idx
     }
 
@@ -182,7 +191,10 @@ impl SpatialIndex {
                 nodes: vec![OctreeNode::Leaf { start: 0, count: 0 }],
                 items: Vec::new(),
                 root: 0,
-                bounds: AABB { min: [0; 3], max: [0; 3] },
+                bounds: AABB {
+                    min: [0; 3],
+                    max: [0; 3],
+                },
                 count: 0,
             };
         }
@@ -243,7 +255,9 @@ impl SpatialIndex {
                         let dist = query.distance_squared(&entry.coord);
 
                         if results.len() < k || dist < max_dist {
-                            let pos = results.iter().position(|(_, d)| dist < *d)
+                            let pos = results
+                                .iter()
+                                .position(|(_, d)| dist < *d)
                                 .unwrap_or(results.len());
                             results.insert(pos, (*entry, dist));
 
@@ -362,7 +376,9 @@ impl TreeBuilder {
         }
 
         // Reserve slot for internal node
-        self.nodes.push(OctreeNode::Internal { children: [EMPTY; 8] });
+        self.nodes.push(OctreeNode::Internal {
+            children: [EMPTY; 8],
+        });
 
         // Recursively build children
         let mut children = [EMPTY; 8];
@@ -385,11 +401,26 @@ mod tests {
 
     fn make_entries() -> Vec<SpatialEntry> {
         vec![
-            SpatialEntry { node_id: 1, coord: SimdCoord::from_f64(0.0, 0.0, 0.0, 1.0) },
-            SpatialEntry { node_id: 2, coord: SimdCoord::from_f64(10.0, 0.0, 0.0, 1.0) },
-            SpatialEntry { node_id: 3, coord: SimdCoord::from_f64(0.0, 10.0, 0.0, 1.0) },
-            SpatialEntry { node_id: 4, coord: SimdCoord::from_f64(100.0, 100.0, 0.0, 1.0) },
-            SpatialEntry { node_id: 5, coord: SimdCoord::from_f64(5.0, 5.0, 0.0, 1.0) },
+            SpatialEntry {
+                node_id: 1,
+                coord: SimdCoord::from_f64(0.0, 0.0, 0.0, 1.0),
+            },
+            SpatialEntry {
+                node_id: 2,
+                coord: SimdCoord::from_f64(10.0, 0.0, 0.0, 1.0),
+            },
+            SpatialEntry {
+                node_id: 3,
+                coord: SimdCoord::from_f64(0.0, 10.0, 0.0, 1.0),
+            },
+            SpatialEntry {
+                node_id: 4,
+                coord: SimdCoord::from_f64(100.0, 100.0, 0.0, 1.0),
+            },
+            SpatialEntry {
+                node_id: 5,
+                coord: SimdCoord::from_f64(5.0, 5.0, 0.0, 1.0),
+            },
         ]
     }
 
@@ -462,7 +493,7 @@ mod tests {
         assert_eq!(nearest.len(), 10);
         // Results should be sorted by distance
         for i in 1..nearest.len() {
-            assert!(nearest[i-1].1 <= nearest[i].1);
+            assert!(nearest[i - 1].1 <= nearest[i].1);
         }
     }
 

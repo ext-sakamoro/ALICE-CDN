@@ -73,7 +73,11 @@ impl MaglevHash {
 
     /// Create with custom table size (should be prime)
     pub fn with_table_size(nodes: Vec<NodeId>, table_size: usize) -> Self {
-        assert!(nodes.len() <= EMPTY as usize, "Too many nodes (max {})", EMPTY);
+        assert!(
+            nodes.len() <= EMPTY as usize,
+            "Too many nodes (max {})",
+            EMPTY
+        );
 
         let mut maglev = Self {
             table: vec![EMPTY; table_size],

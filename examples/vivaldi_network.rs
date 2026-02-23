@@ -25,22 +25,10 @@ fn main() {
 
     // Predict RTT between pairs
     println!("\nPredicted RTT (distance units):");
-    println!(
-        "  Tokyo    <-> London:   {}",
-        tokyo.distance(&london)
-    );
-    println!(
-        "  Tokyo    <-> New York: {}",
-        tokyo.distance(&new_york)
-    );
-    println!(
-        "  Tokyo    <-> Sydney:   {}",
-        tokyo.distance(&sydney)
-    );
-    println!(
-        "  London   <-> New York: {}",
-        london.distance(&new_york)
-    );
+    println!("  Tokyo    <-> London:   {}", tokyo.distance(&london));
+    println!("  Tokyo    <-> New York: {}", tokyo.distance(&new_york));
+    println!("  Tokyo    <-> Sydney:   {}", tokyo.distance(&sydney));
+    println!("  London   <-> New York: {}", london.distance(&new_york));
 
     // Find nearest node to a query point
     let candidates = [tokyo, london, new_york, sydney];

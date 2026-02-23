@@ -1,6 +1,6 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
 use alice_cdn::prelude::*;
-use alice_cdn::{ContentId, NodeId, SMALL_TABLE_SIZE, DEFAULT_TABLE_SIZE};
+use alice_cdn::{ContentId, NodeId, DEFAULT_TABLE_SIZE, SMALL_TABLE_SIZE};
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 
 fn bench_simd_distance(c: &mut Criterion) {
     let a = SimdCoord::from_f64(35.6, 139.7, 0.0, 1.0);
@@ -50,13 +50,9 @@ fn bench_maglev_build(c: &mut Criterion) {
 
     for n_nodes in [10, 50, 100] {
         let nodes: Vec<u64> = (0..n_nodes).collect();
-        group.bench_with_input(
-            BenchmarkId::new("nodes", n_nodes),
-            &nodes,
-            |b, nodes| {
-                b.iter(|| MaglevHash::new(black_box(nodes.clone())))
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("nodes", n_nodes), &nodes, |b, nodes| {
+            b.iter(|| MaglevHash::new(black_box(nodes.clone())))
+        });
     }
     group.finish();
 }

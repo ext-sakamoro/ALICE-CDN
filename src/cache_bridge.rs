@@ -26,7 +26,12 @@ pub enum CdnCacheResult<V> {
 
 impl<V: Clone + Send + Sync + 'static> CachedCdnNode<V> {
     /// Create a CDN node with local cache.
-    pub fn new(node_id: u64, coord: VivaldiCoord, peer_ids: Vec<u64>, cache_capacity: usize) -> Self {
+    pub fn new(
+        node_id: u64,
+        coord: VivaldiCoord,
+        peer_ids: Vec<u64>,
+        cache_capacity: usize,
+    ) -> Self {
         let cache = AliceCache::with_config(CacheConfig {
             capacity: cache_capacity,
             num_nodes: peer_ids.len() as i32,
@@ -35,7 +40,12 @@ impl<V: Clone + Send + Sync + 'static> CachedCdnNode<V> {
             ..Default::default()
         });
         let maglev = MaglevHash::new(peer_ids);
-        Self { node_id, coord, cache, maglev }
+        Self {
+            node_id,
+            coord,
+            cache,
+            maglev,
+        }
     }
 
     /// Fetch content: check cache first, return Miss if not found.

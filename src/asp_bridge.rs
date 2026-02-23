@@ -13,9 +13,7 @@
 
 use libasp::AspPacket;
 
-use crate::{
-    ContentLocator, MaglevHash, NodeId, RendezvousHash, VivaldiCoord,
-};
+use crate::{ContentLocator, MaglevHash, NodeId, RendezvousHash, VivaldiCoord};
 
 /// ASP stream routing via CDN topology.
 pub struct AspStreamRouter {
@@ -44,10 +42,7 @@ impl AspStreamRouter {
     }
 
     /// Find the closest replica node using Vivaldi coordinates.
-    pub fn closest_replica(
-        &self,
-        replicas: &[(NodeId, VivaldiCoord)],
-    ) -> Option<NodeId> {
+    pub fn closest_replica(&self, replicas: &[(NodeId, VivaldiCoord)]) -> Option<NodeId> {
         let refs: Vec<_> = replicas.iter().map(|(id, c)| (*id, c)).collect();
         self.locator.find_closest(refs).map(|(id, _rtt)| id)
     }

@@ -192,14 +192,18 @@ pub fn typed_content_id(content_id: u64, content_type: ContentType) -> u64 {
 pub fn extract_content_type(typed_id: u64) -> ContentType {
     /// Reverse lookup: type_bits → ContentType (index 0-4 used, rest = Generic)
     const REVERSE: [ContentType; 5] = [
-        ContentType::Generic,  // 0
-        ContentType::Asdf,     // 1
-        ContentType::Mesh,     // 2
-        ContentType::Texture,  // 3
-        ContentType::Audio,    // 4
+        ContentType::Generic, // 0
+        ContentType::Asdf,    // 1
+        ContentType::Mesh,    // 2
+        ContentType::Texture, // 3
+        ContentType::Audio,   // 4
     ];
     let bits = (typed_id >> 60) as usize;
-    if bits < 5 { REVERSE[bits] } else { ContentType::Generic }
+    if bits < 5 {
+        REVERSE[bits]
+    } else {
+        ContentType::Generic
+    }
 }
 
 /// Extract the raw content ID (without type tag) from a typed ID.
@@ -235,8 +239,8 @@ mod tests {
     fn test_asdf_metadata_parse() {
         let mut header = [0u8; 16];
         header[..4].copy_from_slice(b"ASDF");
-        header[4..6].copy_from_slice(&1u16.to_le_bytes());   // version = 1
-        header[6..8].copy_from_slice(&0u16.to_le_bytes());   // flags = 0
+        header[4..6].copy_from_slice(&1u16.to_le_bytes()); // version = 1
+        header[6..8].copy_from_slice(&0u16.to_le_bytes()); // flags = 0
         header[8..12].copy_from_slice(&42u32.to_le_bytes()); // node_count = 42
         header[12..16].copy_from_slice(&0xDEADBEEFu32.to_le_bytes()); // crc32
 

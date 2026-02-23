@@ -148,10 +148,10 @@ const CE: Fixed = Fixed(SCALE / 4); // 0.25 - error weight
 /// 3D Vivaldi Coordinate + Height (Fused with SimdCoord)
 ///
 /// **Memory Layout**: 32 bytes, 32-byte aligned
-/// - data[0]: x coordinate (scaled by COORD_SCALE)
-/// - data[1]: y coordinate (scaled by COORD_SCALE)
-/// - data[2]: z coordinate (scaled by COORD_SCALE)
-/// - data[3]: height (scaled by COORD_SCALE)
+/// - `data[0]`: x coordinate (scaled by COORD_SCALE)
+/// - `data[1]`: y coordinate (scaled by COORD_SCALE)
+/// - `data[2]`: z coordinate (scaled by COORD_SCALE)
+/// - `data[3]`: height (scaled by COORD_SCALE)
 ///
 /// Error estimate is stored separately for cache efficiency
 #[repr(C, align(32))]
@@ -294,7 +294,7 @@ impl VivaldiCoord {
             let diff = peer.inner.data[i] - self.inner.data[i];
             // movement in COORD_SCALE units = neg_error * diff * delta * COORD_SCALE / (dist * SCALE * SCALE)
             let movement = (neg_error as i128 * diff as i128 * delta as i128 * COORD_SCALE as i128)
-                         / (dist as i128 * SCALE as i128 * SCALE as i128);
+                / (dist as i128 * SCALE as i128 * SCALE as i128);
 
             // Clamp and apply
             let max_move = (MAX_MOVEMENT.0 * COORD_SCALE) / SCALE;
@@ -304,7 +304,7 @@ impl VivaldiCoord {
 
         // Update height (also convert to COORD_SCALE)
         let height_delta = (neg_error as i128 * delta as i128 * COORD_SCALE as i128)
-                         / (SCALE as i128 * SCALE as i128 * 16);
+            / (SCALE as i128 * SCALE as i128 * 16);
         let min_height_scaled = (MIN_HEIGHT.0 * COORD_SCALE) / SCALE;
         self.inner.data[3] = (self.inner.data[3] + height_delta as i64).max(min_height_scaled);
     }
@@ -433,7 +433,11 @@ mod tests {
 
         // Euclidean distance = sqrt(3^2 + 4^2) = 5
         let dist = a.euclidean_distance(&b);
-        assert!((dist.to_f64() - 5.0).abs() < 0.5, "Distance: {}", dist.to_f64());
+        assert!(
+            (dist.to_f64() - 5.0).abs() < 0.5,
+            "Distance: {}",
+            dist.to_f64()
+        );
 
         // RTT = distance + heights = 5 + 5 + 5 = 15
         let rtt = a.predict_rtt(&b);

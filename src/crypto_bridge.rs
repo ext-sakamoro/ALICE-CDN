@@ -3,7 +3,7 @@
 //! Provides content encryption and integrity verification for CDN-delivered
 //! assets (DRM, private content, signed payloads).
 
-use alice_crypto::{self as crypto, Key, CipherError};
+use alice_crypto::{self as crypto, CipherError, Key};
 
 /// Sealed CDN content with metadata.
 #[derive(Debug, Clone)]

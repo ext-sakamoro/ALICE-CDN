@@ -52,25 +52,41 @@ fn fnv1a_hash(key: ContentId, node: NodeId) -> u64 {
 
     // Unrolled for key
     let kb = key.to_le_bytes();
-    hash ^= kb[0] as u64; hash = hash.wrapping_mul(FNV_PRIME);
-    hash ^= kb[1] as u64; hash = hash.wrapping_mul(FNV_PRIME);
-    hash ^= kb[2] as u64; hash = hash.wrapping_mul(FNV_PRIME);
-    hash ^= kb[3] as u64; hash = hash.wrapping_mul(FNV_PRIME);
-    hash ^= kb[4] as u64; hash = hash.wrapping_mul(FNV_PRIME);
-    hash ^= kb[5] as u64; hash = hash.wrapping_mul(FNV_PRIME);
-    hash ^= kb[6] as u64; hash = hash.wrapping_mul(FNV_PRIME);
-    hash ^= kb[7] as u64; hash = hash.wrapping_mul(FNV_PRIME);
+    hash ^= kb[0] as u64;
+    hash = hash.wrapping_mul(FNV_PRIME);
+    hash ^= kb[1] as u64;
+    hash = hash.wrapping_mul(FNV_PRIME);
+    hash ^= kb[2] as u64;
+    hash = hash.wrapping_mul(FNV_PRIME);
+    hash ^= kb[3] as u64;
+    hash = hash.wrapping_mul(FNV_PRIME);
+    hash ^= kb[4] as u64;
+    hash = hash.wrapping_mul(FNV_PRIME);
+    hash ^= kb[5] as u64;
+    hash = hash.wrapping_mul(FNV_PRIME);
+    hash ^= kb[6] as u64;
+    hash = hash.wrapping_mul(FNV_PRIME);
+    hash ^= kb[7] as u64;
+    hash = hash.wrapping_mul(FNV_PRIME);
 
     // Unrolled for node
     let nb = node.to_le_bytes();
-    hash ^= nb[0] as u64; hash = hash.wrapping_mul(FNV_PRIME);
-    hash ^= nb[1] as u64; hash = hash.wrapping_mul(FNV_PRIME);
-    hash ^= nb[2] as u64; hash = hash.wrapping_mul(FNV_PRIME);
-    hash ^= nb[3] as u64; hash = hash.wrapping_mul(FNV_PRIME);
-    hash ^= nb[4] as u64; hash = hash.wrapping_mul(FNV_PRIME);
-    hash ^= nb[5] as u64; hash = hash.wrapping_mul(FNV_PRIME);
-    hash ^= nb[6] as u64; hash = hash.wrapping_mul(FNV_PRIME);
-    hash ^= nb[7] as u64; hash = hash.wrapping_mul(FNV_PRIME);
+    hash ^= nb[0] as u64;
+    hash = hash.wrapping_mul(FNV_PRIME);
+    hash ^= nb[1] as u64;
+    hash = hash.wrapping_mul(FNV_PRIME);
+    hash ^= nb[2] as u64;
+    hash = hash.wrapping_mul(FNV_PRIME);
+    hash ^= nb[3] as u64;
+    hash = hash.wrapping_mul(FNV_PRIME);
+    hash ^= nb[4] as u64;
+    hash = hash.wrapping_mul(FNV_PRIME);
+    hash ^= nb[5] as u64;
+    hash = hash.wrapping_mul(FNV_PRIME);
+    hash ^= nb[6] as u64;
+    hash = hash.wrapping_mul(FNV_PRIME);
+    hash ^= nb[7] as u64;
+    hash = hash.wrapping_mul(FNV_PRIME);
 
     hash
 }
@@ -152,11 +168,7 @@ impl ContentLocator {
     }
 
     /// Find best node from candidates
-    pub fn find_best<'a, I>(
-        &self,
-        content_id: ContentId,
-        candidates: I,
-    ) -> Option<ScoredNode>
+    pub fn find_best<'a, I>(&self, content_id: ContentId, candidates: I) -> Option<ScoredNode>
     where
         I: IntoIterator<Item = (NodeId, &'a VivaldiCoord)>,
     {
@@ -187,10 +199,7 @@ impl ContentLocator {
     }
 
     /// Find closest node (pure distance, no hash)
-    pub fn find_closest<'a, I>(
-        &self,
-        candidates: I,
-    ) -> Option<(NodeId, Fixed)>
+    pub fn find_closest<'a, I>(&self, candidates: I) -> Option<(NodeId, Fixed)>
     where
         I: IntoIterator<Item = (NodeId, &'a VivaldiCoord)>,
     {
@@ -201,10 +210,7 @@ impl ContentLocator {
     }
 
     /// Rank nodes by latency only
-    pub fn rank_by_latency<'a, I>(
-        &self,
-        candidates: I,
-    ) -> Vec<(NodeId, Fixed)>
+    pub fn rank_by_latency<'a, I>(&self, candidates: I) -> Vec<(NodeId, Fixed)>
     where
         I: IntoIterator<Item = (NodeId, &'a VivaldiCoord)>,
     {
@@ -332,12 +338,18 @@ impl IndexedLocator {
     }
 
     /// Find best node using two-phase search with MumHash
-    pub fn find_best(&self, content_id: ContentId, candidate_limit: usize) -> Option<(NodeId, i64)> {
+    pub fn find_best(
+        &self,
+        content_id: ContentId,
+        candidate_limit: usize,
+    ) -> Option<(NodeId, i64)> {
         if self.spatial_index.is_empty() {
             return None;
         }
 
-        let candidates = self.spatial_index.find_nearest_k(&self.local_coord, candidate_limit);
+        let candidates = self
+            .spatial_index
+            .find_nearest_k(&self.local_coord, candidate_limit);
 
         let mut best_id = 0;
         let mut best_score = i64::MIN;
@@ -348,13 +360,13 @@ impl IndexedLocator {
             let hash_component = (hash >> 32) as i64;
 
             let dist_component = if dist_sq > 0 {
-                (1i64 << 28) / dist_sq.max(1)  // Reduced shift to prevent overflow
+                (1i64 << 28) / dist_sq.max(1) // Reduced shift to prevent overflow
             } else {
                 1i64 << 28
             };
 
             let score = self.hash_weight.saturating_mul(hash_component) / (1 << 16)
-                      + self.distance_weight.saturating_mul(dist_component) / (1 << 16);
+                + self.distance_weight.saturating_mul(dist_component) / (1 << 16);
 
             if score > best_score {
                 best_score = score;
@@ -366,12 +378,19 @@ impl IndexedLocator {
     }
 
     /// Find top-K nodes
-    pub fn find_top_k(&self, content_id: ContentId, k: usize, candidate_limit: usize) -> Vec<(NodeId, i64)> {
+    pub fn find_top_k(
+        &self,
+        content_id: ContentId,
+        k: usize,
+        candidate_limit: usize,
+    ) -> Vec<(NodeId, i64)> {
         if self.spatial_index.is_empty() {
             return Vec::new();
         }
 
-        let candidates = self.spatial_index.find_nearest_k(&self.local_coord, candidate_limit);
+        let candidates = self
+            .spatial_index
+            .find_nearest_k(&self.local_coord, candidate_limit);
 
         let mut scored: Vec<(NodeId, i64)> = candidates
             .iter()
@@ -384,7 +403,7 @@ impl IndexedLocator {
                     1i64 << 28
                 };
                 let score = self.hash_weight.saturating_mul(hash_component) / (1 << 16)
-                          + self.distance_weight.saturating_mul(dist_component) / (1 << 16);
+                    + self.distance_weight.saturating_mul(dist_component) / (1 << 16);
                 (entry.node_id, score)
             })
             .collect();
@@ -639,7 +658,9 @@ mod tests {
             let nodes = vec![(1u64, &close_node), (2u64, &far_node)];
 
             // With ASDF (priority=4), distance is boosted 4×
-            let best = locator.find_best_typed(42, nodes, ContentType::Asdf).unwrap();
+            let best = locator
+                .find_best_typed(42, nodes, ContentType::Asdf)
+                .unwrap();
             assert_eq!(best.id, 1, "ASDF should pick closest node, got {}", best.id);
         }
 
@@ -656,7 +677,10 @@ mod tests {
 
             // Generic (priority=1) should be close to untyped
             let diff = (typed_generic.score.0 - untyped.score.0).abs();
-            assert!(diff < Fixed::from_f64(0.01).0, "Generic should match untyped");
+            assert!(
+                diff < Fixed::from_f64(0.01).0,
+                "Generic should match untyped"
+            );
 
             // ASDF should have different score (distance boosted)
             assert_ne!(typed_asdf.score, untyped.score);
@@ -666,18 +690,18 @@ mod tests {
         fn test_typed_replicas_count() {
             let nodes: Vec<u64> = (1..=10).collect();
 
-            let asdf_replicas = RendezvousHash::find_replicas_typed(
-                42, nodes.iter().copied(), ContentType::Asdf,
-            );
+            let asdf_replicas =
+                RendezvousHash::find_replicas_typed(42, nodes.iter().copied(), ContentType::Asdf);
             assert_eq!(asdf_replicas.len(), 5, "ASDF should get 5 replicas");
 
-            let mesh_replicas = RendezvousHash::find_replicas_typed(
-                42, nodes.iter().copied(), ContentType::Mesh,
-            );
+            let mesh_replicas =
+                RendezvousHash::find_replicas_typed(42, nodes.iter().copied(), ContentType::Mesh);
             assert_eq!(mesh_replicas.len(), 3, "Mesh should get 3 replicas");
 
             let generic_replicas = RendezvousHash::find_replicas_typed(
-                42, nodes.iter().copied(), ContentType::Generic,
+                42,
+                nodes.iter().copied(),
+                ContentType::Generic,
             );
             assert_eq!(generic_replicas.len(), 2, "Generic should get 2 replicas");
         }

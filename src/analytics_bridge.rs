@@ -75,7 +75,9 @@ impl CdnMetrics {
 }
 
 impl Default for CdnMetrics {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 #[cfg(test)]
