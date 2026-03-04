@@ -26,6 +26,7 @@ pub enum CdnCacheResult<V> {
 
 impl<V: Clone + Send + Sync + 'static> CachedCdnNode<V> {
     /// Create a CDN node with local cache.
+    #[must_use]
     pub fn new(
         node_id: u64,
         coord: VivaldiCoord,
@@ -49,6 +50,7 @@ impl<V: Clone + Send + Sync + 'static> CachedCdnNode<V> {
     }
 
     /// Fetch content: check cache first, return Miss if not found.
+    #[must_use]
     pub fn fetch(&self, content_id: u64) -> CdnCacheResult<V> {
         match self.cache.get(&content_id) {
             Some(v) => CdnCacheResult::Hit(v),
@@ -62,16 +64,19 @@ impl<V: Clone + Send + Sync + 'static> CachedCdnNode<V> {
     }
 
     /// Check Markov prefetch: should we pre-fetch the next asset?
+    #[must_use]
     pub fn should_prefetch(&self, current: &u64, next: &u64) -> bool {
         self.cache.should_prefetch(current, next)
     }
 
     /// Cache hit rate for this node.
+    #[must_use]
     pub fn hit_rate(&self) -> f64 {
         self.cache.hit_rate()
     }
 
     /// O(1) Maglev routing: which peer owns this content?
+    #[must_use]
     pub fn route(&self, content_id: u64) -> Option<u64> {
         self.maglev.lookup(content_id)
     }

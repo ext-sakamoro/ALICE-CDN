@@ -35,6 +35,7 @@ impl SdfCdnRouter {
     /// * `edge_nodes` - List of edge node IDs
     /// * `local_coord` - Vivaldi coordinate of the requesting client/gateway
     /// * `replica_count` - Number of replicas per spatial cell
+    #[must_use]
     pub fn new(edge_nodes: Vec<NodeId>, local_coord: VivaldiCoord, replica_count: usize) -> Self {
         let maglev = MaglevHash::new(edge_nodes);
         let locator = ContentLocator::new(local_coord);
@@ -49,6 +50,7 @@ impl SdfCdnRouter {
     /// Route an SDF request for a spatial cell to the best edge node
     ///
     /// Returns the primary node for this spatial cell (via Maglev).
+    #[must_use]
     pub fn route_sdf_request(&self, spatial_cell: SpatialCell) -> Option<NodeId> {
         self.maglev.lookup(spatial_cell as u64)
     }
@@ -57,6 +59,7 @@ impl SdfCdnRouter {
     ///
     /// Returns the best edge node considering both consistent hashing
     /// and network latency via Vivaldi coordinates.
+    #[must_use]
     pub fn route_sdf_request_latency_aware(
         &self,
         spatial_cell: SpatialCell,
@@ -77,6 +80,7 @@ impl SdfCdnRouter {
     /// Find replica nodes for a spatial cell
     ///
     /// Returns up to `replica_count` nodes that should cache this cell's data.
+    #[must_use]
     pub fn find_replicas(
         &self,
         spatial_cell: SpatialCell,
@@ -95,6 +99,7 @@ impl SdfCdnRouter {
     /// Route a batch of spatial cells (e.g., for a spatial region query)
     ///
     /// Groups cells by their assigned edge node for efficient batching.
+    #[must_use]
     pub fn route_batch(&self, cells: &[SpatialCell]) -> Vec<(NodeId, Vec<SpatialCell>)> {
         let mut groups: std::collections::HashMap<NodeId, Vec<SpatialCell>> =
             std::collections::HashMap::with_capacity(cells.len().min(32));
@@ -122,6 +127,7 @@ pub struct SdfRoutingStats {
 }
 
 impl SdfRoutingStats {
+    #[must_use]
     pub fn hit_rate(&self) -> f64 {
         if self.total_requests == 0 {
             return 0.0;

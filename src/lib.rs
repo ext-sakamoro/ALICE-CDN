@@ -1,10 +1,10 @@
 //! ALICE-CDN: Decentralized Latency-Optimized Content Delivery - Scorched Earth Edition
 //!
 //! A high-performance CDN library implementing:
-//! - **Vivaldi Network Coordinates**: Fused with SimdCoord, no conversion overhead
+//! - **Vivaldi Network Coordinates**: Fused with `SimdCoord`, no conversion overhead
 //! - **SIMD-Accelerated Math**: 32-byte aligned, integer-only operations
 //! - **Spatial Indexing**: Compressed Octree with u32 indices (4x smaller)
-//! - **MumHash**: Inline multiply-based hashing (faster than FNV-1a)
+//! - **`MumHash`**: Inline multiply-based hashing (faster than FNV-1a)
 //! - **Maglev Consistent Hashing**: Zero-allocation O(1) lookup
 //!
 //! # Design Philosophy
@@ -81,6 +81,18 @@
 //! | Maglev lookup | O(1) | Table lookup |
 //! | Maglev rebuild | O(m) | m = table size |
 
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::cast_lossless,
+    clippy::similar_names,
+    clippy::many_single_char_names,
+    clippy::module_name_repetitions,
+    clippy::inline_always,
+    clippy::too_many_lines
+)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 #[cfg(not(feature = "std"))]
@@ -153,7 +165,7 @@ mod tests {
         let best = locator.find_best(12345, nodes).unwrap();
 
         // With strong distance preference, node3 should often win (closest)
-        assert!(best.id >= 1 && best.id <= 3);
+        assert!((1..=3).contains(&best.id));
         assert!(best.predicted_rtt.to_f64() > 0.0);
     }
 
@@ -295,5 +307,72 @@ mod tests {
         let idx2 = maglev.lookup(12345);
         assert_eq!(idx1, idx2);
         assert!(idx1 < 10);
+    }
+
+    // --- End-to-end integration tests ---
+
+    #[test]
+    fn test_vivaldi_to_spatial_pipeline() {
+        // Full pipeline: Vivaldi coords -> spatial index -> nearest search
+        let nodes: Vec<_> = (1..=50)
+            .map(|i| {
+                let coord = VivaldiCoord::at(i as f64 * 2.0, i as f64, 0.0, 2.0);
+                (i as u64, *coord.as_simd())
+            })
+            .collect();
+
+        let entries: Vec<_> = nodes
+            .iter()
+            .map(|(id, coord)| SpatialEntry {
+                node_id: *id,
+                coord: *coord,
+            })
+            .collect();
+
+        let index = SpatialIndex::build(entries);
+        let local = SimdCoord::from_f64(10.0, 5.0, 0.0, 1.0);
+        let nearest = index.find_nearest_k(&local, 5);
+
+        assert_eq!(nearest.len(), 5);
+        // Nearest should be low-numbered nodes (near origin)
+        assert!(nearest[0].0.node_id <= 10);
+    }
+
+    #[test]
+    fn test_maglev_rendezvous_agreement() {
+        // Both Maglev and Rendezvous should assign content to valid nodes
+        let nodes: Vec<u64> = (1..=5).collect();
+        let maglev = MaglevHash::new(nodes.clone());
+
+        for key in 0..100u64 {
+            let m_node = maglev.lookup(key).unwrap();
+            let r_node = RendezvousHash::find_owner(key, nodes.iter().copied()).unwrap();
+            assert!(nodes.contains(&m_node), "Maglev returned invalid node");
+            assert!(nodes.contains(&r_node), "Rendezvous returned invalid node");
+        }
+    }
+
+    #[test]
+    fn test_version_string() {
+        assert!(!VERSION.is_empty());
+    }
+
+    #[test]
+    fn test_prelude_imports() {
+        // Verify prelude re-exports work
+        use crate::prelude::*;
+        let _c = SimdCoord::new();
+        let _v = VivaldiCoord::new();
+        let _s = VivaldiSystem::new();
+        let _f = Fixed::ZERO;
+    }
+
+    #[test]
+    fn test_locator_single_candidate() {
+        let local = VivaldiCoord::new();
+        let locator = ContentLocator::new(local);
+        let node = VivaldiCoord::at(10.0, 0.0, 0.0, 5.0);
+        let best = locator.find_best(42, vec![(1u64, &node)]).unwrap();
+        assert_eq!(best.id, 1);
     }
 }

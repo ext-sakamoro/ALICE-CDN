@@ -7,7 +7,7 @@
 //! ```
 
 use alice_cdn::prelude::*;
-use alice_cdn::{ContentId, NodeId, SMALL_TABLE_SIZE};
+use alice_cdn::NodeId;
 
 fn main() {
     println!("=== Maglev Consistent Hashing Demo ===\n");
@@ -65,7 +65,7 @@ fn main() {
     println!("\n=== Rendezvous Hash (Replica Selection) ===\n");
 
     let cdn_nodes: Vec<NodeId> = (0..8).collect();
-    let content = ContentId(0xDEADBEEF);
-    let replicas = RendezvousHash::find_replicas(content, &cdn_nodes, 3);
+    let content: u64 = 0xDEAD_BEEF;
+    let replicas = RendezvousHash::find_replicas(content, cdn_nodes.iter().copied(), 3);
     println!("Content 0xDEADBEEF -> Replicas: {:?}", replicas);
 }

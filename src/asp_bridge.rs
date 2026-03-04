@@ -23,6 +23,7 @@ pub struct AspStreamRouter {
 
 impl AspStreamRouter {
     /// Create a new stream router with the given edge nodes and local coordinate.
+    #[must_use]
     pub fn new(node_ids: Vec<NodeId>, local_coord: VivaldiCoord) -> Self {
         let maglev = MaglevHash::new(node_ids);
         let locator = ContentLocator::with_weights(local_coord, 0.3, 0.7);
@@ -32,16 +33,19 @@ impl AspStreamRouter {
     /// Find the primary edge node for a stream using Maglev consistent hashing.
     ///
     /// Returns `None` if no nodes are available.
+    #[must_use]
     pub fn primary_node(&self, stream_id: u64) -> Option<NodeId> {
         self.maglev.lookup(stream_id)
     }
 
     /// Find replica nodes for a stream using Rendezvous hashing.
+    #[must_use]
     pub fn replica_nodes(&self, stream_id: u64, count: usize, all_nodes: &[NodeId]) -> Vec<NodeId> {
         RendezvousHash::find_replicas(stream_id, all_nodes.iter().copied(), count)
     }
 
     /// Find the closest replica node using Vivaldi coordinates.
+    #[must_use]
     pub fn closest_replica(&self, replicas: &[(NodeId, VivaldiCoord)]) -> Option<NodeId> {
         let refs: Vec<_> = replicas.iter().map(|(id, c)| (*id, c)).collect();
         self.locator.find_closest(refs).map(|(id, _rtt)| id)
@@ -50,6 +54,7 @@ impl AspStreamRouter {
     /// Route an ASP packet: returns (primary_node, closest_replica).
     ///
     /// Uses the packet's sequence number as the stream identifier.
+    #[must_use]
     pub fn route_packet(
         &self,
         packet: &AspPacket,
@@ -65,6 +70,7 @@ impl AspStreamRouter {
 /// Estimate the CDN delivery overhead for an ASP packet.
 ///
 /// Returns `(packet_bytes, estimated_rtt_ms)` for the closest node.
+#[must_use]
 pub fn estimate_delivery(
     packet: &AspPacket,
     local: &VivaldiCoord,

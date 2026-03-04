@@ -1,5 +1,10 @@
 # Contributing to ALICE-CDN
 
+## Prerequisites
+
+- Rust 1.70+ (stable)
+- `cargo fmt`, `cargo clippy` components installed
+
 ## Build
 
 ```bash

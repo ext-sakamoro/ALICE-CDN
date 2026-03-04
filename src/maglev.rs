@@ -4,7 +4,7 @@
 //!
 //! **Optimizations**:
 //! - **No permutation table**: Compute `(offset + i*skip) % M` on-the-fly
-//! - **Compact lookup**: `Vec<u16>` instead of `Vec<Option<usize>>` (u16::MAX = empty)
+//! - **Compact lookup**: `Vec<u16>` instead of `Vec<Option<usize>>` (`u16::MAX` = empty)
 //! - **Cache-friendly**: Single contiguous allocation for lookup table
 //!
 //! **Properties**:
@@ -32,7 +32,7 @@ const EMPTY: u16 = u16::MAX;
 /// Maglev hash function 1 (offset)
 #[inline(always)]
 fn hash1(key: u64, table_size: usize) -> usize {
-    const MUL: u64 = 0x9E3779B97F4A7C15; // Golden ratio prime
+    const MUL: u64 = 0x9E37_79B9_7F4A_7C15; // Golden ratio prime
     ((key.wrapping_mul(MUL)) as usize) % table_size
 }
 
@@ -40,7 +40,7 @@ fn hash1(key: u64, table_size: usize) -> usize {
 /// Returns value in [1, table_size-1] to ensure coprimality with M
 #[inline(always)]
 fn hash2(key: u64, table_size: usize) -> usize {
-    const MUL: u64 = 0x517CC1B727220A95; // Different prime
+    const MUL: u64 = 0x517C_C1B7_2722_0A95; // Different prime
     ((key.wrapping_mul(MUL)) as usize) % (table_size - 1) + 1
 }
 
@@ -57,9 +57,9 @@ struct NodeParams {
 
 /// Maglev consistent hash lookup table (Zero-Allocation Edition)
 pub struct MaglevHash {
-    /// Lookup table: table[hash(key) % size] = node_index (u16::MAX = empty)
+    /// Lookup table: table[hash(key) % size] = `node_index` (`u16::MAX` = empty)
     table: Vec<u16>,
-    /// Node list (maps index to NodeId)
+    /// Node list (maps index to `NodeId`)
     nodes: Vec<NodeId>,
     /// Table size (prime number)
     table_size: usize,
@@ -67,16 +67,21 @@ pub struct MaglevHash {
 
 impl MaglevHash {
     /// Create new Maglev hash with default table size
+    #[must_use]
     pub fn new(nodes: Vec<NodeId>) -> Self {
         Self::with_table_size(nodes, DEFAULT_TABLE_SIZE)
     }
 
     /// Create with custom table size (should be prime)
+    ///
+    /// # Panics
+    ///
+    /// Panics if `nodes.len()` exceeds `u16::MAX` (65535).
+    #[must_use]
     pub fn with_table_size(nodes: Vec<NodeId>, table_size: usize) -> Self {
         assert!(
             nodes.len() <= EMPTY as usize,
-            "Too many nodes (max {})",
-            EMPTY
+            "Too many nodes (max {EMPTY})"
         );
 
         let mut maglev = Self {
@@ -135,8 +140,11 @@ impl MaglevHash {
         }
     }
 
-    /// Lookup node for a key (O(1))
+    /// Lookup node for a key (O(1)).
+    ///
+    /// Returns `None` if no nodes were added.
     #[inline(always)]
+    #[must_use]
     pub fn lookup(&self, key: u64) -> Option<NodeId> {
         if self.nodes.is_empty() {
             return None;
@@ -151,8 +159,11 @@ impl MaglevHash {
         }
     }
 
-    /// Lookup returning node index (for advanced use)
+    /// Lookup returning node index (for advanced use).
+    ///
+    /// Returns `None` if no nodes were added.
     #[inline(always)]
+    #[must_use]
     pub fn lookup_index(&self, key: u64) -> Option<usize> {
         if self.nodes.is_empty() {
             return None;
@@ -167,8 +178,11 @@ impl MaglevHash {
         }
     }
 
-    /// Lookup with explicit hash (for custom hashing)
+    /// Lookup with explicit hash (for custom hashing).
+    ///
+    /// Returns `None` if no nodes were added.
     #[inline(always)]
+    #[must_use]
     pub fn lookup_by_hash(&self, hash: u64) -> Option<NodeId> {
         if self.nodes.is_empty() {
             return None;
@@ -203,23 +217,27 @@ impl MaglevHash {
 
     /// Get all nodes
     #[inline(always)]
+    #[must_use]
     pub fn nodes(&self) -> &[NodeId] {
         &self.nodes
     }
 
     /// Get table size
     #[inline(always)]
+    #[must_use]
     pub fn table_size(&self) -> usize {
         self.table_size
     }
 
     /// Get memory usage in bytes
     #[inline(always)]
+    #[must_use]
     pub fn memory_usage(&self) -> usize {
         self.table.len() * 2 + self.nodes.len() * 8
     }
 
     /// Check distribution evenness
+    #[must_use]
     pub fn distribution_stats(&self) -> DistributionStats {
         if self.nodes.is_empty() {
             return DistributionStats {
@@ -274,7 +292,7 @@ pub struct DistributionStats {
 pub struct WeightedMaglev {
     /// Inner Maglev hash
     inner: MaglevHash,
-    /// Node weights (node_id -> weight)
+    /// Node weights (`node_id` -> weight)
     weights: Vec<(NodeId, u32)>,
 }
 
@@ -282,6 +300,7 @@ impl WeightedMaglev {
     /// Create weighted Maglev
     ///
     /// Nodes with higher weight get more virtual entries
+    #[must_use]
     pub fn new(weighted_nodes: Vec<(NodeId, u32)>) -> Self {
         // Expand nodes based on weight
         let expanded: Vec<NodeId> = weighted_nodes
@@ -300,12 +319,14 @@ impl WeightedMaglev {
 
     /// Lookup node for key
     #[inline(always)]
+    #[must_use]
     pub fn lookup(&self, key: u64) -> Option<NodeId> {
         self.inner.lookup(key).map(|virtual_id| virtual_id / 1000)
     }
 
     /// Get original weights
     #[inline(always)]
+    #[must_use]
     pub fn weights(&self) -> &[(NodeId, u32)] {
         &self.weights
     }
@@ -323,6 +344,11 @@ pub struct StaticMaglev {
 
 impl StaticMaglev {
     /// Build from node IDs (nodes are indexed 0..N-1 in provided order)
+    ///
+    /// # Panics
+    ///
+    /// Panics if `nodes.len()` exceeds `u16::MAX` (65535).
+    #[must_use]
     pub fn build(nodes: &[NodeId], table_size: usize) -> Self {
         assert!(nodes.len() <= EMPTY as usize);
 
@@ -366,6 +392,7 @@ impl StaticMaglev {
 
     /// Lookup returning node index
     #[inline(always)]
+    #[must_use]
     pub fn lookup(&self, key: u64) -> usize {
         let slot = hash1(key, self.table_size);
         self.table[slot] as usize
@@ -384,7 +411,7 @@ mod tests {
         // Should return some node
         let node = maglev.lookup(12345);
         assert!(node.is_some());
-        assert!(node.unwrap() >= 1 && node.unwrap() <= 5);
+        assert!((1..=5).contains(&node.unwrap()));
     }
 
     #[test]
@@ -545,5 +572,112 @@ mod tests {
         // Should be roughly 2 * 65537 + 8 * 100 = ~131KB
         let usage = maglev.memory_usage();
         assert!(usage < 150_000, "Memory usage: {}", usage);
+    }
+
+    // --- Boundary tests ---
+
+    #[test]
+    fn test_maglev_single_node() {
+        let maglev = MaglevHash::with_table_size(vec![42], SMALL_TABLE_SIZE);
+        // All keys must map to the single node
+        for key in 0..100u64 {
+            assert_eq!(maglev.lookup(key), Some(42));
+        }
+    }
+
+    #[test]
+    fn test_lookup_index_valid() {
+        let nodes = vec![10, 20, 30];
+        let maglev = MaglevHash::with_table_size(nodes, SMALL_TABLE_SIZE);
+        for key in 0..50u64 {
+            if let Some(idx) = maglev.lookup_index(key) {
+                assert!(idx < 3, "Index out of range: {}", idx);
+            }
+        }
+    }
+
+    #[test]
+    fn test_lookup_by_hash_works() {
+        let nodes = vec![1, 2, 3, 4, 5];
+        let maglev = MaglevHash::with_table_size(nodes, SMALL_TABLE_SIZE);
+        let result = maglev.lookup_by_hash(0xDEAD_BEEF);
+        assert!(result.is_some());
+        let node = result.unwrap();
+        assert!((1..=5).contains(&node));
+    }
+
+    #[test]
+    fn test_lookup_empty_returns_none() {
+        let maglev = MaglevHash::with_table_size(vec![], SMALL_TABLE_SIZE);
+        assert!(maglev.lookup_index(42).is_none());
+        assert!(maglev.lookup_by_hash(42).is_none());
+    }
+
+    #[test]
+    fn test_weighted_maglev_single_node() {
+        let weighted = WeightedMaglev::new(vec![(99, 1)]);
+        for key in 0..100u64 {
+            assert_eq!(weighted.lookup(key), Some(99));
+        }
+    }
+
+    #[test]
+    fn test_static_maglev_empty() {
+        let maglev = StaticMaglev::build(&[], 17);
+        // With empty nodes, table is all EMPTY
+        let idx = maglev.lookup(42);
+        assert_eq!(idx, u16::MAX as usize); // EMPTY marker
+    }
+
+    #[test]
+    fn test_add_duplicate_node_idempotent() {
+        let mut maglev = MaglevHash::with_table_size(vec![1, 2, 3], SMALL_TABLE_SIZE);
+        let before = maglev.lookup(42);
+        maglev.add_node(2); // Already exists
+        let after = maglev.lookup(42);
+        assert_eq!(before, after, "Adding duplicate should be no-op");
+    }
+
+    #[test]
+    fn test_remove_nonexistent_node_noop() {
+        let mut maglev = MaglevHash::with_table_size(vec![1, 2, 3], SMALL_TABLE_SIZE);
+        let before = maglev.lookup(42);
+        maglev.remove_node(999); // Not present
+        let after = maglev.lookup(42);
+        assert_eq!(before, after, "Removing nonexistent should be no-op");
+    }
+
+    #[test]
+    fn test_maglev_all_keys_assigned() {
+        let nodes = vec![1, 2, 3, 4, 5];
+        let maglev = MaglevHash::with_table_size(nodes, SMALL_TABLE_SIZE);
+        for key in 0..SMALL_TABLE_SIZE as u64 {
+            assert!(maglev.lookup(key).is_some(), "Key {} unassigned", key);
+        }
+    }
+
+    #[test]
+    fn test_maglev_nodes_accessor() {
+        let nodes = vec![10, 20, 30];
+        let maglev = MaglevHash::with_table_size(nodes.clone(), SMALL_TABLE_SIZE);
+        assert_eq!(maglev.nodes(), &nodes);
+        assert_eq!(maglev.table_size(), SMALL_TABLE_SIZE);
+    }
+
+    #[test]
+    fn test_weighted_maglev_weights_accessor() {
+        let weights = vec![(1u64, 3u32), (2, 1)];
+        let weighted = WeightedMaglev::new(weights.clone());
+        assert_eq!(weighted.weights(), &weights);
+    }
+
+    #[test]
+    fn test_distribution_stats_empty() {
+        let maglev = MaglevHash::with_table_size(vec![], SMALL_TABLE_SIZE);
+        let stats = maglev.distribution_stats();
+        assert!(stats.node_counts.is_empty());
+        assert_eq!(stats.min_count, 0);
+        assert_eq!(stats.max_count, 0);
+        assert_eq!(stats.std_dev, 0.0);
     }
 }

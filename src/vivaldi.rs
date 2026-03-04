@@ -3,7 +3,7 @@
 //! **Algorithm**: Decentralized RTT prediction using mass-spring model.
 //!
 //! **Scorched Earth Optimizations**:
-//! - **Fused Layout**: VivaldiCoord IS SimdCoord - no conversion overhead
+//! - **Fused Layout**: `VivaldiCoord` IS `SimdCoord` - no conversion overhead
 //! - **32-byte aligned**: Cache-line friendly, SIMD-ready
 //! - **Integer-only math**: No floating point in hot paths
 //!
@@ -36,42 +36,49 @@ impl Fixed {
 
     /// Create from integer milliseconds
     #[inline(always)]
+    #[must_use]
     pub fn from_ms(ms: i64) -> Self {
         Fixed(ms * SCALE)
     }
 
     /// Create from microseconds
     #[inline(always)]
+    #[must_use]
     pub fn from_us(us: i64) -> Self {
         Fixed(us * SCALE / 1000)
     }
 
     /// Create from floating point (for initialization only)
     #[inline(always)]
+    #[must_use]
     pub fn from_f64(f: f64) -> Self {
         Fixed((f * SCALE as f64) as i64)
     }
 
     /// Convert to milliseconds
     #[inline(always)]
+    #[must_use]
     pub fn to_ms(self) -> i64 {
         self.0 / SCALE
     }
 
     /// Convert to f64 (for display/debug)
     #[inline(always)]
+    #[must_use]
     pub fn to_f64(self) -> f64 {
         self.0 as f64 * RCP_SCALE
     }
 
     /// Absolute value
     #[inline(always)]
+    #[must_use]
     pub fn abs(self) -> Self {
         Fixed(self.0.abs())
     }
 
     /// Square root using Newton-Raphson (integer approximation)
     #[inline(always)]
+    #[must_use]
     pub fn sqrt(self) -> Self {
         if self.0 <= 0 {
             return Fixed::ZERO;
@@ -84,7 +91,7 @@ impl Fixed {
 
         while y < x {
             x = y;
-            y = (x + scaled / x) / 2;
+            y = u128::midpoint(x, scaled / x);
         }
 
         Fixed(x as i64)
@@ -92,12 +99,14 @@ impl Fixed {
 
     /// Minimum of two values
     #[inline(always)]
+    #[must_use]
     pub fn min(self, other: Self) -> Self {
         Fixed(self.0.min(other.0))
     }
 
     /// Maximum of two values
     #[inline(always)]
+    #[must_use]
     pub fn max(self, other: Self) -> Self {
         Fixed(self.0.max(other.0))
     }
@@ -145,13 +154,13 @@ const MIN_HEIGHT: Fixed = Fixed(SCALE / 1000); // 0.001 ms
 const MAX_MOVEMENT: Fixed = Fixed(SCALE * 100); // 100 ms
 const CE: Fixed = Fixed(SCALE / 4); // 0.25 - error weight
 
-/// 3D Vivaldi Coordinate + Height (Fused with SimdCoord)
+/// 3D Vivaldi Coordinate + Height (Fused with `SimdCoord`)
 ///
 /// **Memory Layout**: 32 bytes, 32-byte aligned
-/// - `data[0]`: x coordinate (scaled by COORD_SCALE)
-/// - `data[1]`: y coordinate (scaled by COORD_SCALE)
-/// - `data[2]`: z coordinate (scaled by COORD_SCALE)
-/// - `data[3]`: height (scaled by COORD_SCALE)
+/// - `data[0]`: x coordinate (scaled by `COORD_SCALE`)
+/// - `data[1]`: y coordinate (scaled by `COORD_SCALE`)
+/// - `data[2]`: z coordinate (scaled by `COORD_SCALE`)
+/// - `data[3]`: height (scaled by `COORD_SCALE`)
 ///
 /// Error estimate is stored separately for cache efficiency
 #[repr(C, align(32))]
@@ -168,6 +177,7 @@ pub struct VivaldiCoord {
 impl VivaldiCoord {
     /// Create new coordinate at origin with default height
     #[inline(always)]
+    #[must_use]
     pub fn new() -> Self {
         Self {
             inner: SimdCoord::from_f64(0.0, 0.0, 0.0, 5.0),
@@ -178,6 +188,7 @@ impl VivaldiCoord {
 
     /// Create coordinate at specific position
     #[inline(always)]
+    #[must_use]
     pub fn at(x: f64, y: f64, z: f64, height: f64) -> Self {
         Self {
             inner: SimdCoord::from_f64(x, y, z, height),
@@ -186,8 +197,9 @@ impl VivaldiCoord {
         }
     }
 
-    /// Create from raw SimdCoord
+    /// Create from raw `SimdCoord`
     #[inline(always)]
+    #[must_use]
     pub fn from_simd(coord: SimdCoord) -> Self {
         Self {
             inner: coord,
@@ -196,13 +208,14 @@ impl VivaldiCoord {
         }
     }
 
-    /// Get inner SimdCoord (zero-cost)
+    /// Get inner `SimdCoord` (zero-cost)
     #[inline(always)]
+    #[must_use]
     pub fn as_simd(&self) -> &SimdCoord {
         &self.inner
     }
 
-    /// Get mutable inner SimdCoord
+    /// Get mutable inner `SimdCoord`
     #[inline(always)]
     pub fn as_simd_mut(&mut self) -> &mut SimdCoord {
         &mut self.inner
@@ -210,44 +223,51 @@ impl VivaldiCoord {
 
     /// Get x coordinate as Fixed
     #[inline(always)]
+    #[must_use]
     pub fn x(&self) -> Fixed {
         Fixed(self.inner.data[0] << 4)
     }
 
     /// Get y coordinate as Fixed
     #[inline(always)]
+    #[must_use]
     pub fn y(&self) -> Fixed {
         Fixed(self.inner.data[1] << 4)
     }
 
     /// Get z coordinate as Fixed
     #[inline(always)]
+    #[must_use]
     pub fn z(&self) -> Fixed {
         Fixed(self.inner.data[2] << 4)
     }
 
     /// Get height as Fixed
     #[inline(always)]
+    #[must_use]
     pub fn height(&self) -> Fixed {
         Fixed(self.inner.data[3] << 4)
     }
 
     /// Get error estimate as Fixed
     #[inline(always)]
+    #[must_use]
     pub fn error(&self) -> Fixed {
         Fixed(self.error)
     }
 
     /// Calculate Euclidean distance (excluding height)
     #[inline(always)]
+    #[must_use]
     pub fn euclidean_distance(&self, other: &Self) -> Fixed {
         let dist_scaled = self.inner.distance(&other.inner);
         Fixed(((dist_scaled as i128) << 4) as i64)
     }
 
     /// Predict RTT to another node
-    /// RTT = Euclidean_Distance + Height_A + Height_B
+    /// RTT = `Euclidean_Distance` + `Height_A` + `Height_B`
     #[inline(always)]
+    #[must_use]
     pub fn predict_rtt(&self, other: &Self) -> Fixed {
         let rtt_scaled = self.inner.predict_rtt(&other.inner);
         Fixed(((rtt_scaled as i128) << 4) as i64)
@@ -311,6 +331,7 @@ impl VivaldiCoord {
 
     /// Inflate height based on load (for back-pressure)
     #[inline(always)]
+    #[must_use]
     pub fn apply_load_factor(&self, load: f64) -> Self {
         let load_penalty = (load * 50.0 * COORD_SCALE as f64) as i64;
         let mut result = *self;
@@ -319,6 +340,7 @@ impl VivaldiCoord {
     }
 
     /// Serialize to bytes (48 bytes: 32 coord + 8 error + 8 pad)
+    #[must_use]
     pub fn to_bytes(&self) -> [u8; 48] {
         let mut bytes = [0u8; 48];
         bytes[0..32].copy_from_slice(&self.inner.to_bytes());
@@ -327,6 +349,12 @@ impl VivaldiCoord {
     }
 
     /// Deserialize from bytes
+    ///
+    /// # Panics
+    ///
+    /// Panics if the byte slice arithmetic produces an invalid range (should never
+    /// happen given the fixed-size `[u8; 48]` input).
+    #[must_use]
     pub fn from_bytes(bytes: &[u8; 48]) -> Self {
         let mut coord_bytes = [0u8; 32];
         coord_bytes.copy_from_slice(&bytes[0..32]);
@@ -348,6 +376,7 @@ pub struct VivaldiSystem {
 
 impl VivaldiSystem {
     /// Create new system
+    #[must_use]
     pub fn new() -> Self {
         Self {
             local: VivaldiCoord::new(),
@@ -356,6 +385,7 @@ impl VivaldiSystem {
     }
 
     /// Create with initial coordinate
+    #[must_use]
     pub fn with_coord(coord: VivaldiCoord) -> Self {
         Self {
             local: coord,
@@ -372,17 +402,20 @@ impl VivaldiSystem {
 
     /// Predict RTT to a remote node
     #[inline(always)]
+    #[must_use]
     pub fn predict_rtt(&self, remote: &VivaldiCoord) -> Fixed {
         self.local.predict_rtt(remote)
     }
 
     /// Get local coordinate
     #[inline(always)]
+    #[must_use]
     pub fn get_coord(&self) -> &VivaldiCoord {
         &self.local
     }
 
     /// Check if coordinate has stabilized
+    #[must_use]
     pub fn is_stable(&self) -> bool {
         self.update_count > 10 && self.local.error < SCALE * 3 / 10
     }
@@ -520,5 +553,131 @@ mod tests {
         // VivaldiCoord should be 48 bytes with proper alignment
         assert_eq!(core::mem::size_of::<VivaldiCoord>(), 64); // 32 + 8 + 8 + padding
         assert_eq!(core::mem::align_of::<VivaldiCoord>(), 32);
+    }
+
+    // --- Boundary tests ---
+
+    #[test]
+    fn test_fixed_from_ms_zero() {
+        let f = Fixed::from_ms(0);
+        assert_eq!(f.to_ms(), 0);
+        assert_eq!(f.to_f64(), 0.0);
+    }
+
+    #[test]
+    fn test_fixed_from_us() {
+        let f = Fixed::from_us(1000);
+        assert_eq!(f.to_ms(), 1);
+    }
+
+    #[test]
+    fn test_fixed_division_by_zero() {
+        let a = Fixed::from_f64(10.0);
+        let zero = Fixed::ZERO;
+        let result = a / zero;
+        assert_eq!(result.0, i64::MAX);
+    }
+
+    #[test]
+    fn test_fixed_sqrt_zero_and_negative() {
+        assert_eq!(Fixed::ZERO.sqrt(), Fixed::ZERO);
+        assert_eq!(Fixed::from_f64(-5.0).sqrt(), Fixed::ZERO);
+    }
+
+    #[test]
+    fn test_fixed_abs() {
+        let neg = Fixed::from_f64(-7.5);
+        let pos = neg.abs();
+        assert!((pos.to_f64() - 7.5).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_fixed_min_max() {
+        let a = Fixed::from_f64(3.0);
+        let b = Fixed::from_f64(7.0);
+        assert_eq!(a.min(b), a);
+        assert_eq!(a.max(b), b);
+    }
+
+    #[test]
+    fn test_fixed_identity_operations() {
+        let a = Fixed::from_f64(42.0);
+        assert_eq!((a + Fixed::ZERO).0, a.0);
+        assert_eq!((a - Fixed::ZERO).0, a.0);
+        assert_eq!((a * Fixed::ONE).to_f64().round(), 42.0);
+    }
+
+    #[test]
+    fn test_fixed_from_f64_roundtrip() {
+        for &val in &[0.0, 1.0, -1.0, 3.125, 100.5, -999.9] {
+            let f = Fixed::from_f64(val);
+            assert!((f.to_f64() - val).abs() < 0.01, "Failed for {}", val);
+        }
+    }
+
+    #[test]
+    fn test_fixed_from_ms_roundtrip() {
+        for &val in &[0i64, 1, 10, 100, 1000] {
+            let f = Fixed::from_ms(val);
+            assert_eq!(f.to_ms(), val);
+        }
+    }
+
+    #[test]
+    fn test_vivaldi_coord_new_defaults() {
+        let c = VivaldiCoord::new();
+        assert!((c.inner.x() - 0.0).abs() < 0.01);
+        assert!((c.inner.y() - 0.0).abs() < 0.01);
+        // error starts at 1.0 (SCALE)
+        assert_eq!(c.error, SCALE);
+    }
+
+    #[test]
+    fn test_vivaldi_system_not_stable_initially() {
+        let sys = VivaldiSystem::new();
+        assert!(!sys.is_stable());
+        assert_eq!(sys.update_count, 0);
+    }
+
+    #[test]
+    fn test_vivaldi_from_simd() {
+        let simd = SimdCoord::from_f64(5.0, 10.0, 15.0, 3.0);
+        let coord = VivaldiCoord::from_simd(simd);
+        assert!((coord.as_simd().x() - 5.0).abs() < 0.01);
+        assert!((coord.as_simd().y() - 10.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_vivaldi_coord_euclidean_symmetry() {
+        let a = VivaldiCoord::at(10.0, 20.0, 0.0, 5.0);
+        let b = VivaldiCoord::at(30.0, -5.0, 10.0, 3.0);
+        assert_eq!(a.euclidean_distance(&b).0, b.euclidean_distance(&a).0);
+    }
+
+    #[test]
+    fn test_vivaldi_system_with_coord() {
+        let coord = VivaldiCoord::at(10.0, 20.0, 0.0, 5.0);
+        let sys = VivaldiSystem::with_coord(coord);
+        assert!((sys.get_coord().as_simd().x() - 10.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_vivaldi_system_default() {
+        let sys = VivaldiSystem::default();
+        assert_eq!(sys.update_count, 0);
+    }
+
+    #[test]
+    fn test_vivaldi_as_simd_mut() {
+        let mut coord = VivaldiCoord::new();
+        coord.as_simd_mut().data[0] = 12345;
+        assert_eq!(coord.as_simd().data[0], 12345);
+    }
+
+    #[test]
+    fn test_vivaldi_predict_rtt_symmetry() {
+        let a = VivaldiCoord::at(0.0, 0.0, 0.0, 5.0);
+        let b = VivaldiCoord::at(10.0, 10.0, 0.0, 3.0);
+        assert_eq!(a.predict_rtt(&b).0, b.predict_rtt(&a).0);
     }
 }

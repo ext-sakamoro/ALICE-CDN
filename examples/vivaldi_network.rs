@@ -6,6 +6,7 @@
 //! cargo run --example vivaldi_network
 //! ```
 
+use alice_cdn::find_nearest;
 use alice_cdn::prelude::*;
 
 fn main() {
@@ -36,13 +37,22 @@ fn main() {
     let query = SimdCoord::from_f64(48.8, 2.3, 0.0, 1.0); // Paris
 
     println!("\nNearest to Paris (48.8, 2.3):");
-    let nearest = find_nearest(query, &candidates, 4);
-    for (i, (coord, dist)) in nearest.iter().enumerate() {
-        let label = candidates
-            .iter()
-            .position(|c| c.distance(coord) == 0)
-            .map(|idx| labels[idx])
-            .unwrap_or("?");
-        println!("  {}. {} (distance: {})", i + 1, label, dist);
+    if let Some(idx) = find_nearest(&query, &candidates) {
+        println!(
+            "  Nearest: {} (distance: {})",
+            labels[idx],
+            query.distance(&candidates[idx])
+        );
+    }
+
+    // Rank all nodes by distance
+    let mut ranked: Vec<(usize, i64)> = candidates
+        .iter()
+        .enumerate()
+        .map(|(i, c)| (i, query.distance_squared(c)))
+        .collect();
+    ranked.sort_by_key(|&(_, d)| d);
+    for (rank, (i, dist_sq)) in ranked.iter().enumerate() {
+        println!("  {}. {} (dist²: {})", rank + 1, labels[*i], dist_sq);
     }
 }

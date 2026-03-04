@@ -39,11 +39,13 @@ pub fn open_content(sealed: &SealedContent, key: &Key) -> Result<Vec<u8>, Cipher
 ///
 /// Compares the encrypted blob hash (not content hash) for
 /// tamper detection in transit.
+#[must_use]
 pub fn verify_integrity(data: &[u8]) -> crypto::Hash {
     crypto::hash(data)
 }
 
 /// Derive a per-asset encryption key from asset ID and master secret.
+#[must_use]
 pub fn derive_asset_key(asset_id: u64, master_secret: &[u8]) -> Key {
     let context = format!("alice-cdn-asset-v1:{}", asset_id);
     let raw = crypto::derive_key(&context, master_secret);
@@ -51,6 +53,7 @@ pub fn derive_asset_key(asset_id: u64, master_secret: &[u8]) -> Key {
 }
 
 /// Derive a per-channel DRM key.
+#[must_use]
 pub fn derive_drm_key(channel_id: &str, license_secret: &[u8]) -> Key {
     let context = format!("alice-cdn-drm-v1:{}", channel_id);
     let raw = crypto::derive_key(&context, license_secret);

@@ -22,7 +22,7 @@ const BUCKET_SIZE: usize = 16;
 /// Maximum tree depth to prevent pathological cases
 const MAX_DEPTH: usize = 20;
 
-/// Empty child marker (u32::MAX)
+/// Empty child marker (`u32::MAX`)
 const EMPTY: u32 = u32::MAX;
 
 /// Axis-Aligned Bounding Box (Compact: 48 bytes)
@@ -35,6 +35,7 @@ pub struct AABB {
 impl AABB {
     /// Create AABB containing a single point
     #[inline(always)]
+    #[must_use]
     pub fn from_point(coord: &SimdCoord) -> Self {
         Self {
             min: [coord.data[0], coord.data[1], coord.data[2]],
@@ -55,16 +56,18 @@ impl AABB {
 
     /// Get center point
     #[inline(always)]
+    #[must_use]
     pub fn center(&self) -> [i64; 3] {
         [
-            (self.min[0] + self.max[0]) / 2,
-            (self.min[1] + self.max[1]) / 2,
-            (self.min[2] + self.max[2]) / 2,
+            i64::midpoint(self.min[0], self.max[0]),
+            i64::midpoint(self.min[1], self.max[1]),
+            i64::midpoint(self.min[2], self.max[2]),
         ]
     }
 
     /// Check if point is inside (or on boundary)
     #[inline(always)]
+    #[must_use]
     pub fn contains(&self, coord: &SimdCoord) -> bool {
         coord.data[0] >= self.min[0]
             && coord.data[0] <= self.max[0]
@@ -76,6 +79,7 @@ impl AABB {
 
     /// Minimum squared distance from point to AABB
     #[inline(always)]
+    #[must_use]
     pub fn distance_squared(&self, coord: &SimdCoord) -> i64 {
         let mut dist_sq = 0i128;
 
@@ -149,7 +153,7 @@ pub struct SpatialEntry {
 /// Compressed Octree node
 ///
 /// **Memory Layout**:
-/// - Leaf: tag (1 byte) + count (1 byte) + items_start (4 bytes) = 6 bytes + padding
+/// - Leaf: tag (1 byte) + count (1 byte) + `items_start` (4 bytes) = 6 bytes + padding
 /// - Internal: tag (1 byte) + children (32 bytes) = 33 bytes + padding
 ///
 /// Using enum discriminant for tag
@@ -162,7 +166,7 @@ enum OctreeNode {
         /// Number of items
         count: u16,
     },
-    /// Internal node: 8 children indices (u32::MAX = empty)
+    /// Internal node: 8 children indices (`u32::MAX` = empty)
     Internal {
         /// Child node indices [u32; 8] = 32 bytes (vs 128 bytes with Option<usize>)
         children: [u32; 8],
@@ -185,6 +189,7 @@ pub struct SpatialIndex {
 
 impl SpatialIndex {
     /// Build spatial index from nodes
+    #[must_use]
     pub fn build(entries: Vec<SpatialEntry>) -> Self {
         if entries.is_empty() {
             return Self {
@@ -231,6 +236,7 @@ impl SpatialIndex {
     }
 
     /// Find k nearest neighbors to query point
+    #[must_use]
     pub fn find_nearest_k(&self, query: &SimdCoord, k: usize) -> Vec<(SpatialEntry, i64)> {
         if k == 0 || self.count == 0 {
             return Vec::new();
@@ -266,7 +272,7 @@ impl SpatialIndex {
                             }
 
                             if results.len() >= k {
-                                max_dist = results.last().map(|(_, d)| *d).unwrap_or(i64::MAX);
+                                max_dist = results.last().map_or(i64::MAX, |(_, d)| *d);
                             }
                         }
                     }
@@ -297,6 +303,7 @@ impl SpatialIndex {
     }
 
     /// Find all entries within distance threshold
+    #[must_use]
     pub fn find_within_radius(&self, query: &SimdCoord, radius_squared: i64) -> Vec<SpatialEntry> {
         let mut results = Vec::new();
 
@@ -332,17 +339,20 @@ impl SpatialIndex {
 
     /// Get total number of entries
     #[inline(always)]
+    #[must_use]
     pub fn len(&self) -> usize {
         self.count
     }
 
     /// Check if empty
     #[inline(always)]
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.count == 0
     }
 
     /// Get memory usage in bytes
+    #[must_use]
     pub fn memory_usage(&self) -> usize {
         self.nodes.len() * core::mem::size_of::<OctreeNode>()
             + self.items.len() * core::mem::size_of::<SpatialEntry>()
@@ -520,5 +530,122 @@ mod tests {
         // Should be reasonably efficient
         // 1000 items * 40 bytes + nodes overhead
         assert!(usage < 100_000, "Memory usage: {} bytes", usage);
+    }
+
+    // --- Boundary tests ---
+
+    #[test]
+    fn test_aabb_from_single_point() {
+        let coord = SimdCoord::from_f64(5.0, 10.0, 15.0, 1.0);
+        let aabb = AABB::from_point(&coord);
+        assert_eq!(aabb.min[0], aabb.max[0]);
+        assert_eq!(aabb.min[1], aabb.max[1]);
+        assert_eq!(aabb.min[2], aabb.max[2]);
+    }
+
+    #[test]
+    fn test_aabb_contains_boundary() {
+        let aabb = AABB {
+            min: [0, 0, 0],
+            max: [100, 100, 100],
+        };
+        let on_min = SimdCoord::from_raw(0, 0, 0, 0);
+        let on_max = SimdCoord::from_raw(100, 100, 100, 0);
+        assert!(aabb.contains(&on_min));
+        assert!(aabb.contains(&on_max));
+    }
+
+    #[test]
+    fn test_aabb_distance_squared_interior() {
+        let aabb = AABB {
+            min: [0, 0, 0],
+            max: [100, 100, 100],
+        };
+        let inside = SimdCoord::from_raw(50, 50, 50, 0);
+        assert_eq!(aabb.distance_squared(&inside), 0);
+    }
+
+    #[test]
+    fn test_find_nearest_k_zero() {
+        let entries = make_entries();
+        let index = SpatialIndex::build(entries);
+        let query = SimdCoord::from_f64(0.0, 0.0, 0.0, 1.0);
+        let result = index.find_nearest_k(&query, 0);
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_find_nearest_k_exceeds_count() {
+        let entries = make_entries();
+        let index = SpatialIndex::build(entries);
+        let query = SimdCoord::from_f64(0.0, 0.0, 0.0, 1.0);
+        let result = index.find_nearest_k(&query, 100);
+        assert_eq!(result.len(), 5); // Only 5 entries
+    }
+
+    #[test]
+    fn test_find_within_radius_zero() {
+        let entries = make_entries();
+        let index = SpatialIndex::build(entries);
+        let query = SimdCoord::from_f64(50.0, 50.0, 50.0, 1.0);
+        // Radius 0 should only find exact matches
+        let result = index.find_within_radius(&query, 0);
+        assert!(result.is_empty()); // No point at (50,50,50)
+    }
+
+    #[test]
+    fn test_coincident_points() {
+        // All points at same location — degenerate octree
+        let entries: Vec<SpatialEntry> = (0..50)
+            .map(|i| SpatialEntry {
+                node_id: i as u64,
+                coord: SimdCoord::from_f64(1.0, 1.0, 1.0, 1.0),
+            })
+            .collect();
+
+        let index = SpatialIndex::build(entries);
+        assert_eq!(index.len(), 50);
+        let query = SimdCoord::from_f64(1.0, 1.0, 1.0, 1.0);
+        let nearest = index.find_nearest_k(&query, 5);
+        assert_eq!(nearest.len(), 5);
+    }
+
+    #[test]
+    fn test_find_nearest_k_results_sorted() {
+        let entries: Vec<SpatialEntry> = (0..100)
+            .map(|i| SpatialEntry {
+                node_id: i as u64,
+                coord: SimdCoord::from_f64(i as f64 * 2.0, i as f64, 0.0, 1.0),
+            })
+            .collect();
+
+        let index = SpatialIndex::build(entries);
+        let query = SimdCoord::from_f64(50.0, 25.0, 0.0, 1.0);
+        let nearest = index.find_nearest_k(&query, 10);
+        for i in 1..nearest.len() {
+            assert!(
+                nearest[i - 1].1 <= nearest[i].1,
+                "Not sorted at index {}",
+                i
+            );
+        }
+    }
+
+    #[test]
+    fn test_aabb_expand() {
+        let mut aabb = AABB::from_point(&SimdCoord::from_raw(0, 0, 0, 0));
+        aabb.expand(&SimdCoord::from_raw(10, -5, 20, 0));
+        assert_eq!(aabb.min, [0, -5, 0]);
+        assert_eq!(aabb.max, [10, 0, 20]);
+    }
+
+    #[test]
+    fn test_aabb_center() {
+        let aabb = AABB {
+            min: [0, 0, 0],
+            max: [100, 200, 300],
+        };
+        let center = aabb.center();
+        assert_eq!(center, [50, 100, 150]);
     }
 }

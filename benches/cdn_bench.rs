@@ -1,5 +1,5 @@
 use alice_cdn::prelude::*;
-use alice_cdn::{ContentId, NodeId, DEFAULT_TABLE_SIZE, SMALL_TABLE_SIZE};
+use alice_cdn::{batch_distances, find_nearest};
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 
 fn bench_simd_distance(c: &mut Criterion) {
@@ -12,12 +12,14 @@ fn bench_simd_distance(c: &mut Criterion) {
 }
 
 fn bench_batch_distances(c: &mut Criterion) {
+    let origin = SimdCoord::from_f64(50.0, 100.0, 0.0, 1.0);
     let coords: Vec<SimdCoord> = (0..1000)
         .map(|i| SimdCoord::from_f64(i as f64 * 0.1, i as f64 * 0.2, 0.0, 1.0))
         .collect();
+    let mut out = vec![0i64; 1000];
 
     c.bench_function("batch_distances_1000", |bench| {
-        bench.iter(|| batch_distances(black_box(&coords)))
+        bench.iter(|| batch_distances(black_box(&origin), black_box(&coords), &mut out))
     });
 }
 
@@ -27,8 +29,8 @@ fn bench_find_nearest(c: &mut Criterion) {
         .collect();
     let query = SimdCoord::from_f64(50.0, 100.0, 0.0, 1.0);
 
-    c.bench_function("find_nearest_k3_of_1000", |bench| {
-        bench.iter(|| find_nearest(black_box(query), black_box(&coords), 3))
+    c.bench_function("find_nearest_of_1000", |bench| {
+        bench.iter(|| find_nearest(black_box(&query), black_box(&coords)))
     });
 }
 
@@ -58,7 +60,7 @@ fn bench_maglev_build(c: &mut Criterion) {
 }
 
 fn bench_spatial_index(c: &mut Criterion) {
-    let entries: Vec<SpatialEntry> = (0..1000u32)
+    let entries: Vec<SpatialEntry> = (0..1000u64)
         .map(|i| SpatialEntry {
             coord: SimdCoord::from_f64(i as f64 * 0.1, i as f64 * 0.2, 0.0, 1.0),
             node_id: i,

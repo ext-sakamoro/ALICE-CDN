@@ -21,6 +21,7 @@ pub struct CdnMetrics {
 
 impl CdnMetrics {
     /// Create a new metrics collector.
+    #[must_use]
     pub fn new() -> Self {
         Self {
             unique_clients: HyperLogLog::new(),
@@ -41,21 +42,25 @@ impl CdnMetrics {
     }
 
     /// Estimated unique client count.
+    #[must_use]
     pub fn unique_client_count(&self) -> f64 {
         self.unique_clients.cardinality()
     }
 
     /// P99 latency estimation.
+    #[must_use]
     pub fn p99_latency(&self) -> f64 {
         self.latency_sketch.quantile(0.99)
     }
 
     /// P50 (median) latency estimation.
+    #[must_use]
     pub fn p50_latency(&self) -> f64 {
         self.latency_sketch.quantile(0.50)
     }
 
     /// Estimated request count for a content-id.
+    #[must_use]
     pub fn content_frequency(&self, content_id: &u64) -> u64 {
         self.request_freq.estimate(content_id)
     }

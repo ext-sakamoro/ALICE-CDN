@@ -16,7 +16,7 @@ use core::arch::x86_64::*;
 /// Scale factor for fixed-point (2^16 for coordinate precision)
 const COORD_SCALE: i64 = 1 << 16;
 
-/// Precomputed reciprocal of COORD_SCALE for f64 conversion
+/// Precomputed reciprocal of `COORD_SCALE` for f64 conversion
 const RCP_COORD_SCALE: f64 = 1.0 / (1u64 << 16) as f64;
 
 /// 4-dimensional coordinate vector [x, y, z, height]
@@ -31,6 +31,7 @@ pub struct SimdCoord {
 impl SimdCoord {
     /// Create new coordinate at origin
     #[inline(always)]
+    #[must_use]
     pub const fn new() -> Self {
         Self {
             data: [0, 0, 0, COORD_SCALE],
@@ -39,6 +40,7 @@ impl SimdCoord {
 
     /// Create coordinate from f64 values
     #[inline(always)]
+    #[must_use]
     pub fn from_f64(x: f64, y: f64, z: f64, height: f64) -> Self {
         Self {
             data: [
@@ -52,30 +54,35 @@ impl SimdCoord {
 
     /// Create from raw scaled integers
     #[inline(always)]
+    #[must_use]
     pub const fn from_raw(x: i64, y: i64, z: i64, h: i64) -> Self {
         Self { data: [x, y, z, h] }
     }
 
     /// Get x coordinate as f64
     #[inline(always)]
+    #[must_use]
     pub fn x(&self) -> f64 {
         self.data[0] as f64 * RCP_COORD_SCALE
     }
 
     /// Get y coordinate as f64
     #[inline(always)]
+    #[must_use]
     pub fn y(&self) -> f64 {
         self.data[1] as f64 * RCP_COORD_SCALE
     }
 
     /// Get z coordinate as f64
     #[inline(always)]
+    #[must_use]
     pub fn z(&self) -> f64 {
         self.data[2] as f64 * RCP_COORD_SCALE
     }
 
     /// Get height as f64
     #[inline(always)]
+    #[must_use]
     pub fn height(&self) -> f64 {
         self.data[3] as f64 * RCP_COORD_SCALE
     }
@@ -83,6 +90,7 @@ impl SimdCoord {
     /// Calculate squared Euclidean distance (no sqrt, for comparisons)
     /// Result is in squared scaled units
     #[inline(always)]
+    #[must_use]
     pub fn distance_squared(&self, other: &Self) -> i64 {
         let dx = self.data[0] - other.data[0];
         let dy = self.data[1] - other.data[1];
@@ -98,8 +106,9 @@ impl SimdCoord {
     }
 
     /// Calculate Euclidean distance using integer sqrt
-    /// Result is in scaled units (divide by COORD_SCALE to get real value)
+    /// Result is in scaled units (divide by `COORD_SCALE` to get real value)
     #[inline(always)]
+    #[must_use]
     pub fn distance(&self, other: &Self) -> i64 {
         let dx = self.data[0] - other.data[0];
         let dy = self.data[1] - other.data[1];
@@ -118,19 +127,27 @@ impl SimdCoord {
     }
 
     /// Predict RTT to another node
-    /// RTT = distance + height_self + height_other
+    /// RTT = distance + `height_self` + `height_other`
     #[inline(always)]
+    #[must_use]
     pub fn predict_rtt(&self, other: &Self) -> i64 {
         self.distance(other) + self.data[3] + other.data[3]
     }
 
     /// Predict RTT in milliseconds (f64)
     #[inline(always)]
+    #[must_use]
     pub fn predict_rtt_ms(&self, other: &Self) -> f64 {
         self.predict_rtt(other) as f64 * RCP_COORD_SCALE
     }
 
-    /// SIMD-accelerated distance calculation (x86_64 AVX2)
+    /// SIMD-accelerated distance calculation (x86\_64 AVX2)
+    ///
+    /// # Safety
+    ///
+    /// Caller must ensure the CPU supports AVX2 (`target_feature = "avx2"`).
+    /// Both `self` and `other` must be 32-byte aligned (guaranteed by
+    /// `#[repr(C, align(32))]`).
     #[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
     #[inline(always)]
     pub unsafe fn distance_simd(&self, other: &Self) -> i64 {
@@ -198,6 +215,7 @@ impl SimdCoord {
 
     /// Serialize to bytes (32 bytes)
     #[inline(always)]
+    #[must_use]
     pub fn to_bytes(&self) -> [u8; 32] {
         let mut bytes = [0u8; 32];
         for (i, &val) in self.data.iter().enumerate() {
@@ -207,7 +225,13 @@ impl SimdCoord {
     }
 
     /// Deserialize from bytes
+    ///
+    /// # Panics
+    ///
+    /// Panics if the byte slice arithmetic produces an invalid range (should never
+    /// happen given the fixed-size `[u8; 32]` input).
     #[inline(always)]
+    #[must_use]
     pub fn from_bytes(bytes: &[u8; 32]) -> Self {
         let mut data = [0i64; 4];
         for i in 0..4 {
@@ -253,6 +277,7 @@ impl Sub for SimdCoord {
 ///
 /// This is branchless-optimized and uses only integer operations.
 #[inline(always)]
+#[must_use]
 pub fn isqrt(n: u64) -> u64 {
     if n < 2 {
         return n;
@@ -275,8 +300,9 @@ pub fn isqrt(n: u64) -> u64 {
 }
 
 /// Fast inverse square root approximation (Quake-style)
-/// Returns 1/sqrt(n) scaled by COORD_SCALE
+/// Returns 1/sqrt(n) scaled by `COORD_SCALE`
 #[inline(always)]
+#[must_use]
 pub fn fast_inv_sqrt(n: i64) -> i64 {
     if n <= 0 {
         return i64::MAX;
@@ -305,6 +331,7 @@ pub fn batch_distances(origin: &SimdCoord, targets: &[SimdCoord], out: &mut [i64
 
 /// Find index of minimum distance in batch
 #[inline(always)]
+#[must_use]
 pub fn find_nearest(origin: &SimdCoord, targets: &[SimdCoord]) -> Option<usize> {
     if targets.is_empty() {
         return None;
@@ -401,5 +428,138 @@ mod tests {
         let coord = SimdCoord::new();
         let ptr = &coord as *const SimdCoord as usize;
         assert_eq!(ptr % 32, 0, "Should be 32-byte aligned");
+    }
+
+    // --- Boundary tests ---
+
+    #[test]
+    fn test_isqrt_boundary() {
+        // Very large numbers
+        assert_eq!(isqrt(u64::MAX), 4_294_967_295); // floor(sqrt(2^64-1))
+        assert_eq!(isqrt(u64::MAX - 1), 4_294_967_295);
+        // Perfect squares near limits
+        assert_eq!(isqrt(u64::MAX / 2), 3_037_000_499);
+    }
+
+    #[test]
+    fn test_simd_coord_new_defaults() {
+        let c = SimdCoord::new();
+        assert_eq!(c.x(), 0.0);
+        assert_eq!(c.y(), 0.0);
+        assert_eq!(c.z(), 0.0);
+        assert!((c.height() - 1.0).abs() < 0.01); // Default height = 1.0
+    }
+
+    #[test]
+    fn test_simd_coord_negative_values() {
+        let c = SimdCoord::from_f64(-50.0, -100.0, -25.0, 0.5);
+        assert!((c.x() - (-50.0)).abs() < 0.01);
+        assert!((c.y() - (-100.0)).abs() < 0.01);
+        assert!((c.z() - (-25.0)).abs() < 0.01);
+        assert!((c.height() - 0.5).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_distance_identical_points() {
+        let a = SimdCoord::from_f64(10.0, 20.0, 30.0, 5.0);
+        assert_eq!(a.distance(&a), 0);
+        assert_eq!(a.distance_squared(&a), 0);
+    }
+
+    #[test]
+    fn test_distance_symmetry() {
+        let a = SimdCoord::from_f64(10.0, 20.0, 0.0, 5.0);
+        let b = SimdCoord::from_f64(40.0, -10.0, 15.0, 3.0);
+        assert_eq!(a.distance(&b), b.distance(&a));
+        assert_eq!(a.distance_squared(&b), b.distance_squared(&a));
+    }
+
+    #[test]
+    fn test_distance_triangle_inequality() {
+        let a = SimdCoord::from_f64(0.0, 0.0, 0.0, 1.0);
+        let b = SimdCoord::from_f64(10.0, 0.0, 0.0, 1.0);
+        let c = SimdCoord::from_f64(5.0, 5.0, 0.0, 1.0);
+        // |AB| <= |AC| + |CB|
+        assert!(a.distance(&b) <= a.distance(&c) + c.distance(&b) + 1); // +1 for rounding
+    }
+
+    #[test]
+    fn test_fast_inv_sqrt_edge_cases() {
+        assert_eq!(fast_inv_sqrt(0), i64::MAX);
+        assert_eq!(fast_inv_sqrt(-1), i64::MAX);
+        // Positive value should return finite result
+        let result = fast_inv_sqrt(COORD_SCALE);
+        assert!(result > 0 && result < i64::MAX);
+    }
+
+    #[test]
+    fn test_find_nearest_empty() {
+        let origin = SimdCoord::new();
+        assert_eq!(find_nearest(&origin, &[]), None);
+    }
+
+    #[test]
+    fn test_find_nearest_single() {
+        let origin = SimdCoord::new();
+        let target = SimdCoord::from_f64(10.0, 0.0, 0.0, 1.0);
+        assert_eq!(find_nearest(&origin, &[target]), Some(0));
+    }
+
+    #[test]
+    fn test_batch_distances_correctness() {
+        let origin = SimdCoord::from_f64(0.0, 0.0, 0.0, 1.0);
+        let targets = vec![
+            SimdCoord::from_f64(3.0, 4.0, 0.0, 1.0),
+            SimdCoord::from_f64(6.0, 8.0, 0.0, 1.0),
+        ];
+        let mut out = vec![0i64; 2];
+        batch_distances(&origin, &targets, &mut out);
+
+        // Verify each distance matches individual calculation
+        assert_eq!(out[0], origin.distance_squared(&targets[0]));
+        assert_eq!(out[1], origin.distance_squared(&targets[1]));
+    }
+
+    #[test]
+    fn test_from_f64_roundtrip_accessors() {
+        let c = SimdCoord::from_f64(42.5, -17.3, 99.9, 7.7);
+        assert!((c.x() - 42.5).abs() < 0.01);
+        assert!((c.y() - (-17.3)).abs() < 0.01);
+        assert!((c.z() - 99.9).abs() < 0.01);
+        assert!((c.height() - 7.7).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_simd_coord_from_raw() {
+        let c = SimdCoord::from_raw(100, 200, 300, 400);
+        assert_eq!(c.data[0], 100);
+        assert_eq!(c.data[1], 200);
+        assert_eq!(c.data[2], 300);
+        assert_eq!(c.data[3], 400);
+    }
+
+    #[test]
+    fn test_simd_coord_add_sub() {
+        let a = SimdCoord::from_raw(10, 20, 30, 40);
+        let b = SimdCoord::from_raw(1, 2, 3, 4);
+        let sum = a + b;
+        assert_eq!(sum.data, [11, 22, 33, 44]);
+        let diff = a - b;
+        assert_eq!(diff.data, [9, 18, 27, 36]);
+    }
+
+    #[test]
+    fn test_predict_rtt_includes_height() {
+        let a = SimdCoord::from_f64(0.0, 0.0, 0.0, 10.0);
+        let b = SimdCoord::from_f64(0.0, 0.0, 0.0, 20.0);
+        // Distance = 0, but RTT = 0 + height_a + height_b = 30
+        let rtt_ms = a.predict_rtt_ms(&b);
+        assert!((rtt_ms - 30.0).abs() < 1.0, "RTT: {}", rtt_ms);
+    }
+
+    #[test]
+    fn test_size_of_simd_coord() {
+        assert_eq!(core::mem::size_of::<SimdCoord>(), 32);
+        assert_eq!(core::mem::align_of::<SimdCoord>(), 32);
     }
 }

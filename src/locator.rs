@@ -3,11 +3,11 @@
 //! **Algorithm**: Weighted Rendezvous Hashing combining hash score with Vivaldi distance.
 //!
 //! **Scorched Earth Optimizations**:
-//! - **MumHash**: Inline multiply-based hash (faster than FNV-1a)
-//! - **Fused VivaldiCoord**: Direct SimdCoord access, no conversion
+//! - **`MumHash`**: Inline multiply-based hash (faster than FNV-1a)
+//! - **Fused `VivaldiCoord`**: Direct `SimdCoord` access, no conversion
 //! - **Spatial Index**: O(log N) pre-filtering via Octree
 //!
-//! Score(Node) = Hash(Key, NodeID) / Distance(Client, Node)
+//! Score(Node) = Hash(Key, `NodeID`) / Distance(Client, Node)
 //!
 //! > "The best cache is the one closest to you."
 
@@ -30,8 +30,8 @@ pub type ContentId = u64;
 /// Faster than FNV-1a due to fewer operations and better pipelining
 #[inline(always)]
 fn mum_hash(key: ContentId, node: NodeId) -> u64 {
-    const K0: u64 = 0x517cc1b727220a95;
-    const K1: u64 = 0x9e3779b97f4a7c15;
+    const K0: u64 = 0x517c_c1b7_2722_0a95;
+    const K1: u64 = 0x9e37_79b9_7f4a_7c15;
 
     // Mix key and node with multiplies
     let a = key.wrapping_mul(K0);
@@ -45,8 +45,8 @@ fn mum_hash(key: ContentId, node: NodeId) -> u64 {
 /// Legacy FNV-1a hash (kept for compatibility)
 #[inline]
 fn fnv1a_hash(key: ContentId, node: NodeId) -> u64 {
-    const FNV_OFFSET: u64 = 0xcbf29ce484222325;
-    const FNV_PRIME: u64 = 0x100000001b3;
+    const FNV_OFFSET: u64 = 0xcbf2_9ce4_8422_2325;
+    const FNV_PRIME: u64 = 0x0000_0100_0000_01b3;
 
     let mut hash = FNV_OFFSET;
 
@@ -106,7 +106,7 @@ pub struct ScoredNode {
 
 /// Locator for finding optimal nodes for content
 pub struct ContentLocator {
-    /// Local node's Vivaldi coordinate (fused with SimdCoord)
+    /// Local node's Vivaldi coordinate (fused with `SimdCoord`)
     local_coord: VivaldiCoord,
     /// Weight for hash component (0.0 - 1.0)
     hash_weight: Fixed,
@@ -116,6 +116,7 @@ pub struct ContentLocator {
 
 impl ContentLocator {
     /// Create new locator with default weights
+    #[must_use]
     pub fn new(local_coord: VivaldiCoord) -> Self {
         Self {
             local_coord,
@@ -125,6 +126,7 @@ impl ContentLocator {
     }
 
     /// Create locator with custom weights
+    #[must_use]
     pub fn with_weights(local_coord: VivaldiCoord, hash_weight: f64, distance_weight: f64) -> Self {
         Self {
             local_coord,
@@ -138,8 +140,9 @@ impl ContentLocator {
         self.local_coord = coord;
     }
 
-    /// Calculate score for a single node using MumHash
+    /// Calculate score for a single node using `MumHash`
     #[inline]
+    #[must_use]
     pub fn score_node(
         &self,
         content_id: ContentId,
@@ -167,7 +170,10 @@ impl ContentLocator {
         }
     }
 
-    /// Find best node from candidates
+    /// Find best node from candidates.
+    ///
+    /// Returns `None` if `candidates` is empty.
+    #[must_use]
     pub fn find_best<'a, I>(&self, content_id: ContentId, candidates: I) -> Option<ScoredNode>
     where
         I: IntoIterator<Item = (NodeId, &'a VivaldiCoord)>,
@@ -178,7 +184,8 @@ impl ContentLocator {
             .max_by(|a, b| a.score.cmp(&b.score))
     }
 
-    /// Find top-k best nodes from candidates
+    /// Find top-k best nodes from candidates.
+    #[must_use]
     pub fn find_top_k<'a, I>(
         &self,
         content_id: ContentId,
@@ -198,7 +205,10 @@ impl ContentLocator {
         scored
     }
 
-    /// Find closest node (pure distance, no hash)
+    /// Find closest node (pure distance, no hash).
+    ///
+    /// Returns `None` if `candidates` is empty.
+    #[must_use]
     pub fn find_closest<'a, I>(&self, candidates: I) -> Option<(NodeId, Fixed)>
     where
         I: IntoIterator<Item = (NodeId, &'a VivaldiCoord)>,
@@ -209,7 +219,8 @@ impl ContentLocator {
             .min_by(|a, b| a.1.cmp(&b.1))
     }
 
-    /// Rank nodes by latency only
+    /// Rank nodes by latency only.
+    #[must_use]
     pub fn rank_by_latency<'a, I>(&self, candidates: I) -> Vec<(NodeId, Fixed)>
     where
         I: IntoIterator<Item = (NodeId, &'a VivaldiCoord)>,
@@ -262,7 +273,10 @@ impl ContentLocator {
     ///
     /// Equivalent to `find_best` but adjusts scoring weights based on
     /// `ContentType::priority_weight()`.
+    ///
+    /// Returns `None` if `candidates` is empty.
     #[cfg(feature = "content_types")]
+    #[must_use]
     pub fn find_best_typed<'a, I>(
         &self,
         content_id: ContentId,
@@ -282,6 +296,7 @@ impl ContentLocator {
     ///
     /// ASDF → 5 replicas, Mesh → 3, Texture/Audio/Generic → 2.
     #[cfg(feature = "content_types")]
+    #[must_use]
     pub fn find_top_k_typed<'a, I>(
         &self,
         content_id: ContentId,
@@ -317,6 +332,7 @@ pub struct IndexedLocator {
 
 impl IndexedLocator {
     /// Build indexed locator from node list
+    #[must_use]
     pub fn build(
         local: SimdCoord,
         nodes: Vec<(NodeId, SimdCoord)>,
@@ -337,7 +353,8 @@ impl IndexedLocator {
         }
     }
 
-    /// Find best node using two-phase search with MumHash
+    /// Find best node using two-phase search with `MumHash`
+    #[must_use]
     pub fn find_best(
         &self,
         content_id: ContentId,
@@ -378,6 +395,7 @@ impl IndexedLocator {
     }
 
     /// Find top-K nodes
+    #[must_use]
     pub fn find_top_k(
         &self,
         content_id: ContentId,
@@ -423,7 +441,10 @@ impl IndexedLocator {
 pub struct RendezvousHash;
 
 impl RendezvousHash {
-    /// Find owner using MumHash
+    /// Find owner using `MumHash`.
+    ///
+    /// Returns `None` if `nodes` is empty.
+    #[must_use]
     pub fn find_owner<I>(content_id: ContentId, nodes: I) -> Option<NodeId>
     where
         I: IntoIterator<Item = NodeId>,
@@ -433,7 +454,8 @@ impl RendezvousHash {
             .max_by_key(|&node_id| mum_hash(content_id, node_id))
     }
 
-    /// Find top-k owners for replication
+    /// Find top-k owners for replication.
+    #[must_use]
     pub fn find_replicas<I>(content_id: ContentId, nodes: I, k: usize) -> Vec<NodeId>
     where
         I: IntoIterator<Item = NodeId>,
@@ -448,7 +470,10 @@ impl RendezvousHash {
         scored.into_iter().map(|(id, _)| id).collect()
     }
 
-    /// Find owner using legacy FNV-1a (for compatibility)
+    /// Find owner using legacy FNV-1a (for compatibility).
+    ///
+    /// Returns `None` if `nodes` is empty.
+    #[must_use]
     pub fn find_owner_fnv<I>(content_id: ContentId, nodes: I) -> Option<NodeId>
     where
         I: IntoIterator<Item = NodeId>,
@@ -462,6 +487,7 @@ impl RendezvousHash {
     ///
     /// ASDF → 5, Mesh → 3, Texture/Audio/Generic → 2.
     #[cfg(feature = "content_types")]
+    #[must_use]
     pub fn find_replicas_typed<I>(
         content_id: ContentId,
         nodes: I,
@@ -517,7 +543,7 @@ mod tests {
         let refs: Vec<_> = nodes.iter().map(|(id, c)| (*id, c)).collect();
         let best = locator.find_best(12345, refs).unwrap();
 
-        assert!(best.id >= 1 && best.id <= 4);
+        assert!((1..=4).contains(&best.id));
     }
 
     #[test]
@@ -640,6 +666,121 @@ mod tests {
         for &count in &counts {
             assert!(count > 400 && count < 900, "Uneven: {}", count);
         }
+    }
+
+    // --- Boundary tests ---
+
+    #[test]
+    fn test_find_best_empty_candidates() {
+        let local = VivaldiCoord::at(0.0, 0.0, 0.0, 5.0);
+        let locator = ContentLocator::new(local);
+        let empty: Vec<(NodeId, &VivaldiCoord)> = vec![];
+        assert!(locator.find_best(12345, empty).is_none());
+    }
+
+    #[test]
+    fn test_find_closest_empty_candidates() {
+        let local = VivaldiCoord::at(0.0, 0.0, 0.0, 5.0);
+        let locator = ContentLocator::new(local);
+        let empty: Vec<(NodeId, &VivaldiCoord)> = vec![];
+        assert!(locator.find_closest(empty).is_none());
+    }
+
+    #[test]
+    fn test_find_top_k_zero() {
+        let local = VivaldiCoord::at(0.0, 0.0, 0.0, 5.0);
+        let locator = ContentLocator::new(local);
+        let nodes = make_nodes();
+        let refs: Vec<_> = nodes.iter().map(|(id, c)| (*id, c)).collect();
+        let top0 = locator.find_top_k(12345, refs, 0);
+        assert!(top0.is_empty());
+    }
+
+    #[test]
+    fn test_find_top_k_exceeds_len() {
+        let local = VivaldiCoord::at(0.0, 0.0, 0.0, 5.0);
+        let locator = ContentLocator::new(local);
+        let nodes = make_nodes();
+        let refs: Vec<_> = nodes.iter().map(|(id, c)| (*id, c)).collect();
+        let top100 = locator.find_top_k(12345, refs, 100);
+        assert_eq!(top100.len(), 4); // Only 4 nodes available
+    }
+
+    #[test]
+    fn test_find_replicas_exceeds_nodes() {
+        let nodes: Vec<u64> = vec![1, 2, 3];
+        let replicas = RendezvousHash::find_replicas(42, nodes.iter().copied(), 10);
+        assert_eq!(replicas.len(), 3); // Only 3 available
+    }
+
+    #[test]
+    fn test_find_owner_empty() {
+        let empty: Vec<u64> = vec![];
+        assert!(RendezvousHash::find_owner(42, empty.iter().copied()).is_none());
+    }
+
+    #[test]
+    fn test_find_owner_fnv_empty() {
+        let empty: Vec<u64> = vec![];
+        assert!(RendezvousHash::find_owner_fnv(42, empty.iter().copied()).is_none());
+    }
+
+    #[test]
+    fn test_find_owner_deterministic_many_keys() {
+        let nodes: Vec<u64> = (1..=20).collect();
+        for key in 0..100u64 {
+            let o1 = RendezvousHash::find_owner(key, nodes.iter().copied());
+            let o2 = RendezvousHash::find_owner(key, nodes.iter().copied());
+            assert_eq!(o1, o2, "Non-deterministic for key {}", key);
+        }
+    }
+
+    #[test]
+    fn test_score_node_positive_score() {
+        let local = VivaldiCoord::at(0.0, 0.0, 0.0, 5.0);
+        let locator = ContentLocator::new(local);
+        let node = VivaldiCoord::at(10.0, 0.0, 0.0, 5.0);
+        let scored = locator.score_node(42, 1, &node);
+        assert!(scored.score.0 > 0, "Score should be positive");
+        assert!(scored.predicted_rtt.to_f64() > 0.0);
+    }
+
+    #[test]
+    fn test_rank_by_latency_sorted() {
+        let local = VivaldiCoord::at(0.0, 0.0, 0.0, 5.0);
+        let locator = ContentLocator::new(local);
+        let nodes = make_nodes();
+        let refs: Vec<_> = nodes.iter().map(|(id, c)| (*id, c)).collect();
+        let ranked = locator.rank_by_latency(refs);
+        for i in 1..ranked.len() {
+            assert!(ranked[i - 1].1 <= ranked[i].1, "Not sorted at index {}", i);
+        }
+    }
+
+    #[test]
+    fn test_update_coord() {
+        let local = VivaldiCoord::at(0.0, 0.0, 0.0, 5.0);
+        let mut locator = ContentLocator::new(local);
+        let new_coord = VivaldiCoord::at(50.0, 50.0, 0.0, 5.0);
+        locator.update_coord(new_coord);
+        // No panic, coord updated
+    }
+
+    #[test]
+    fn test_indexed_locator_empty() {
+        let local = SimdCoord::from_f64(0.0, 0.0, 0.0, 1.0);
+        let locator = IndexedLocator::build(local, vec![], 0.5, 0.5);
+        assert!(locator.find_best(42, 10).is_none());
+        assert!(locator.find_top_k(42, 3, 10).is_empty());
+    }
+
+    #[test]
+    fn test_indexed_locator_update_local() {
+        let local = SimdCoord::from_f64(0.0, 0.0, 0.0, 1.0);
+        let nodes = vec![(1u64, SimdCoord::from_f64(10.0, 0.0, 0.0, 1.0))];
+        let mut locator = IndexedLocator::build(local, nodes, 0.5, 0.5);
+        locator.update_local(SimdCoord::from_f64(5.0, 0.0, 0.0, 1.0));
+        assert!(locator.find_best(42, 10).is_some());
     }
 
     #[cfg(feature = "content_types")]

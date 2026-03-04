@@ -17,4 +17,4 @@ All notable changes to ALICE-CDN will be documented in this file.
 - `crypto_bridge` — (feature `crypto`) ALICE-Crypto content encryption (DRM, signed payloads)
 - `sdf_cdn_bridge` — (feature `sdf`) SDF-aware CDN routing (spatial cell to edge node)
 - `no_std` support with `alloc` fallback
-- 53 unit tests
+- 142 unit tests (125 base + 13 content_types + 4 sdf)

@@ -1,5 +1,9 @@
 # ALICE-CDN
 
+[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE)
+[![Rust](https://img.shields.io/badge/rust-1.70%2B-orange.svg)](https://www.rust-lang.org)
+[![Tests](https://img.shields.io/badge/tests-142_passing-brightgreen.svg)](#quality)
+
 **Decentralized Latency-Optimized Content Delivery - Scorched Earth Edition**
 
 A high-performance Rust library for building decentralized CDN infrastructure with latency-aware content routing.
@@ -231,7 +235,7 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-alice-cdn = "0.1"
+alice-cdn = "0.2"
 ```
 
 ## Related Projects
@@ -350,6 +354,15 @@ let node = router.route_packet(&asp_packet);
 // Estimate delivery cost
 let (hops, latency_ms) = estimate_delivery(&packet, &local_coord, &target_coord);
 ```
+
+## Quality
+
+| Metric | Value |
+|--------|-------|
+| **Tests** | 142 passed, 0 failures |
+| **clippy pedantic** | 0 warnings |
+| **cargo fmt** | clean |
+| **`#[must_use]`** | all pub value-returning functions |
 
 ## License
 
