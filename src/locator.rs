@@ -29,7 +29,7 @@ pub type ContentId = u64;
 /// Based on multiply-and-mix technique (WyHash/MumHash family)
 /// Faster than FNV-1a due to fewer operations and better pipelining
 #[inline(always)]
-fn mum_hash(key: ContentId, node: NodeId) -> u64 {
+const fn mum_hash(key: ContentId, node: NodeId) -> u64 {
     const K0: u64 = 0x517c_c1b7_2722_0a95;
     const K1: u64 = 0x9e37_79b9_7f4a_7c15;
 
@@ -44,7 +44,7 @@ fn mum_hash(key: ContentId, node: NodeId) -> u64 {
 
 /// Legacy FNV-1a hash (kept for compatibility)
 #[inline]
-fn fnv1a_hash(key: ContentId, node: NodeId) -> u64 {
+const fn fnv1a_hash(key: ContentId, node: NodeId) -> u64 {
     const FNV_OFFSET: u64 = 0xcbf2_9ce4_8422_2325;
     const FNV_PRIME: u64 = 0x0000_0100_0000_01b3;
 
@@ -136,7 +136,7 @@ impl ContentLocator {
     }
 
     /// Update local coordinate (after Vivaldi update)
-    pub fn update_coord(&mut self, coord: VivaldiCoord) {
+    pub const fn update_coord(&mut self, coord: VivaldiCoord) {
         self.local_coord = coord;
     }
 
@@ -432,7 +432,7 @@ impl IndexedLocator {
     }
 
     /// Update local coordinate
-    pub fn update_local(&mut self, coord: SimdCoord) {
+    pub const fn update_local(&mut self, coord: SimdCoord) {
         self.local_coord = coord;
     }
 }
@@ -581,7 +581,7 @@ mod tests {
         let refs: Vec<_> = nodes.iter().map(|(id, c)| (*id, c)).collect();
         let (closest_id, rtt) = locator.find_closest(refs).unwrap();
 
-        assert!(closest_id <= 3, "Unexpected closest: {}", closest_id);
+        assert!(closest_id <= 3, "Unexpected closest: {closest_id}");
         assert!(rtt.to_f64() < 50.0);
     }
 
@@ -635,7 +635,7 @@ mod tests {
         assert!(result.is_some());
 
         let (best_id, _score) = result.unwrap();
-        assert!(best_id <= 20, "Expected nearby node, got {}", best_id);
+        assert!(best_id <= 20, "Expected nearby node, got {best_id}");
     }
 
     #[test]
@@ -664,7 +664,7 @@ mod tests {
 
         // Each bucket should have roughly 10000/16 = 625
         for &count in &counts {
-            assert!(count > 400 && count < 900, "Uneven: {}", count);
+            assert!(count > 400 && count < 900, "Uneven: {count}");
         }
     }
 
@@ -731,7 +731,7 @@ mod tests {
         for key in 0..100u64 {
             let o1 = RendezvousHash::find_owner(key, nodes.iter().copied());
             let o2 = RendezvousHash::find_owner(key, nodes.iter().copied());
-            assert_eq!(o1, o2, "Non-deterministic for key {}", key);
+            assert_eq!(o1, o2, "Non-deterministic for key {key}");
         }
     }
 
@@ -753,7 +753,7 @@ mod tests {
         let refs: Vec<_> = nodes.iter().map(|(id, c)| (*id, c)).collect();
         let ranked = locator.rank_by_latency(refs);
         for i in 1..ranked.len() {
-            assert!(ranked[i - 1].1 <= ranked[i].1, "Not sorted at index {}", i);
+            assert!(ranked[i - 1].1 <= ranked[i].1, "Not sorted at index {i}");
         }
     }
 

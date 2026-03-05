@@ -36,7 +36,7 @@ impl AABB {
     /// Create AABB containing a single point
     #[inline(always)]
     #[must_use]
-    pub fn from_point(coord: &SimdCoord) -> Self {
+    pub const fn from_point(coord: &SimdCoord) -> Self {
         Self {
             min: [coord.data[0], coord.data[1], coord.data[2]],
             max: [coord.data[0], coord.data[1], coord.data[2]],
@@ -57,7 +57,7 @@ impl AABB {
     /// Get center point
     #[inline(always)]
     #[must_use]
-    pub fn center(&self) -> [i64; 3] {
+    pub const fn center(&self) -> [i64; 3] {
         [
             i64::midpoint(self.min[0], self.max[0]),
             i64::midpoint(self.min[1], self.max[1]),
@@ -68,7 +68,7 @@ impl AABB {
     /// Check if point is inside (or on boundary)
     #[inline(always)]
     #[must_use]
-    pub fn contains(&self, coord: &SimdCoord) -> bool {
+    pub const fn contains(&self, coord: &SimdCoord) -> bool {
         coord.data[0] >= self.min[0]
             && coord.data[0] <= self.max[0]
             && coord.data[1] >= self.min[1]
@@ -100,7 +100,7 @@ impl AABB {
 
     /// Get octant index (0-7) for a point relative to center
     #[inline(always)]
-    fn octant(&self, coord: &SimdCoord) -> usize {
+    const fn octant(&self, coord: &SimdCoord) -> usize {
         let c = self.center();
         let mut idx = 0;
         if coord.data[0] >= c[0] {
@@ -117,7 +117,7 @@ impl AABB {
 
     /// Get child AABB for given octant
     #[inline(always)]
-    fn child_aabb(&self, octant: usize) -> Self {
+    const fn child_aabb(&self, octant: usize) -> Self {
         let c = self.center();
         let mut child = *self;
 
@@ -340,20 +340,20 @@ impl SpatialIndex {
     /// Get total number of entries
     #[inline(always)]
     #[must_use]
-    pub fn len(&self) -> usize {
+    pub const fn len(&self) -> usize {
         self.count
     }
 
     /// Check if empty
     #[inline(always)]
     #[must_use]
-    pub fn is_empty(&self) -> bool {
+    pub const fn is_empty(&self) -> bool {
         self.count == 0
     }
 
     /// Get memory usage in bytes
     #[must_use]
-    pub fn memory_usage(&self) -> usize {
+    pub const fn memory_usage(&self) -> usize {
         self.nodes.len() * core::mem::size_of::<OctreeNode>()
             + self.items.len() * core::mem::size_of::<SpatialEntry>()
     }
@@ -512,7 +512,7 @@ mod tests {
         // Internal node with [u32; 8] should be much smaller than [Option<usize>; 8]
         let internal_size = core::mem::size_of::<OctreeNode>();
         // OctreeNode::Internal has [u32; 8] = 32 bytes + enum discriminant + padding
-        assert!(internal_size <= 48, "Node size: {} bytes", internal_size);
+        assert!(internal_size <= 48, "Node size: {internal_size} bytes");
     }
 
     #[test]
@@ -529,7 +529,7 @@ mod tests {
 
         // Should be reasonably efficient
         // 1000 items * 40 bytes + nodes overhead
-        assert!(usage < 100_000, "Memory usage: {} bytes", usage);
+        assert!(usage < 100_000, "Memory usage: {usage} bytes");
     }
 
     // --- Boundary tests ---
@@ -623,11 +623,7 @@ mod tests {
         let query = SimdCoord::from_f64(50.0, 25.0, 0.0, 1.0);
         let nearest = index.find_nearest_k(&query, 10);
         for i in 1..nearest.len() {
-            assert!(
-                nearest[i - 1].1 <= nearest[i].1,
-                "Not sorted at index {}",
-                i
-            );
+            assert!(nearest[i - 1].1 <= nearest[i].1, "Not sorted at index {i}");
         }
     }
 

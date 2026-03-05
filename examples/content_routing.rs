@@ -16,12 +16,12 @@ fn main() {
     let nodes: Vec<u64> = vec![100, 200, 300, 400, 500];
     let maglev = MaglevHash::new(nodes.clone());
 
-    println!("Nodes: {:?}", nodes);
+    println!("Nodes: {nodes:?}");
     println!("\nContent -> Node mapping:");
 
     for key in [1u64, 42, 100, 999, 12345, 67890] {
         if let Some(node) = maglev.lookup(key) {
-            println!("  Content {:>5} -> Node {}", key, node);
+            println!("  Content {key:>5} -> Node {node}");
         }
     }
 
@@ -57,7 +57,7 @@ fn main() {
             "  Node {:>3}: {:>5} keys ({:.1}%)",
             node,
             count,
-            *count as f64 / 100.0
+            f64::from(*count) / 100.0
         );
     }
 
@@ -67,5 +67,5 @@ fn main() {
     let cdn_nodes: Vec<NodeId> = (0..8).collect();
     let content: u64 = 0xDEAD_BEEF;
     let replicas = RendezvousHash::find_replicas(content, cdn_nodes.iter().copied(), 3);
-    println!("Content 0xDEADBEEF -> Replicas: {:?}", replicas);
+    println!("Content 0xDEADBEEF -> Replicas: {replicas:?}");
 }

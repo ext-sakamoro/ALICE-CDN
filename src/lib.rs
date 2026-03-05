@@ -236,7 +236,7 @@ mod tests {
 
         // Node 1 should get roughly 5x traffic
         let ratio = count1 as f64 / count2 as f64;
-        assert!(ratio > 3.0 && ratio < 7.0, "Ratio: {}", ratio);
+        assert!(ratio > 3.0 && ratio < 7.0, "Ratio: {ratio}");
     }
 
     #[test]
@@ -246,11 +246,11 @@ mod tests {
 
         // Distance should be ~10
         let dist = local.distance(&remote) as f64 / (1 << 16) as f64;
-        assert!((dist - 10.0).abs() < 1.0, "Distance: {}", dist);
+        assert!((dist - 10.0).abs() < 1.0, "Distance: {dist}");
 
         // RTT = 10 + 5 + 5 = 20
         let rtt = local.predict_rtt_ms(&remote);
-        assert!((rtt - 20.0).abs() < 2.0, "RTT: {}", rtt);
+        assert!((rtt - 20.0).abs() < 2.0, "RTT: {rtt}");
     }
 
     #[test]
@@ -364,7 +364,8 @@ mod tests {
         let _c = SimdCoord::new();
         let _v = VivaldiCoord::new();
         let _s = VivaldiSystem::new();
-        let _f = Fixed::ZERO;
+        let f = Fixed::ZERO;
+        let _ = f;
     }
 
     #[test]

@@ -31,34 +31,34 @@ const COORD_SCALE: i64 = 1 << 16;
 pub struct Fixed(pub i64);
 
 impl Fixed {
-    pub const ZERO: Fixed = Fixed(0);
-    pub const ONE: Fixed = Fixed(SCALE);
+    pub const ZERO: Self = Self(0);
+    pub const ONE: Self = Self(SCALE);
 
     /// Create from integer milliseconds
     #[inline(always)]
     #[must_use]
-    pub fn from_ms(ms: i64) -> Self {
-        Fixed(ms * SCALE)
+    pub const fn from_ms(ms: i64) -> Self {
+        Self(ms * SCALE)
     }
 
     /// Create from microseconds
     #[inline(always)]
     #[must_use]
-    pub fn from_us(us: i64) -> Self {
-        Fixed(us * SCALE / 1000)
+    pub const fn from_us(us: i64) -> Self {
+        Self(us * SCALE / 1000)
     }
 
     /// Create from floating point (for initialization only)
     #[inline(always)]
     #[must_use]
     pub fn from_f64(f: f64) -> Self {
-        Fixed((f * SCALE as f64) as i64)
+        Self((f * SCALE as f64) as i64)
     }
 
     /// Convert to milliseconds
     #[inline(always)]
     #[must_use]
-    pub fn to_ms(self) -> i64 {
+    pub const fn to_ms(self) -> i64 {
         self.0 / SCALE
     }
 
@@ -72,16 +72,16 @@ impl Fixed {
     /// Absolute value
     #[inline(always)]
     #[must_use]
-    pub fn abs(self) -> Self {
-        Fixed(self.0.abs())
+    pub const fn abs(self) -> Self {
+        Self(self.0.abs())
     }
 
     /// Square root using Newton-Raphson (integer approximation)
     #[inline(always)]
     #[must_use]
-    pub fn sqrt(self) -> Self {
+    pub const fn sqrt(self) -> Self {
         if self.0 <= 0 {
-            return Fixed::ZERO;
+            return Self::ZERO;
         }
 
         // Scale up for precision before sqrt, then scale result
@@ -94,21 +94,21 @@ impl Fixed {
             y = u128::midpoint(x, scaled / x);
         }
 
-        Fixed(x as i64)
+        Self(x as i64)
     }
 
     /// Minimum of two values
     #[inline(always)]
     #[must_use]
     pub fn min(self, other: Self) -> Self {
-        Fixed(self.0.min(other.0))
+        Self(self.0.min(other.0))
     }
 
     /// Maximum of two values
     #[inline(always)]
     #[must_use]
     pub fn max(self, other: Self) -> Self {
-        Fixed(self.0.max(other.0))
+        Self(self.0.max(other.0))
     }
 }
 
@@ -116,7 +116,7 @@ impl Add for Fixed {
     type Output = Self;
     #[inline(always)]
     fn add(self, rhs: Self) -> Self {
-        Fixed(self.0 + rhs.0)
+        Self(self.0 + rhs.0)
     }
 }
 
@@ -124,7 +124,7 @@ impl Sub for Fixed {
     type Output = Self;
     #[inline(always)]
     fn sub(self, rhs: Self) -> Self {
-        Fixed(self.0 - rhs.0)
+        Self(self.0 - rhs.0)
     }
 }
 
@@ -133,7 +133,7 @@ impl Mul for Fixed {
     #[inline(always)]
     fn mul(self, rhs: Self) -> Self {
         // Scale down after multiplication to maintain precision
-        Fixed(((self.0 as i128 * rhs.0 as i128) / SCALE as i128) as i64)
+        Self(((self.0 as i128 * rhs.0 as i128) / SCALE as i128) as i64)
     }
 }
 
@@ -142,10 +142,10 @@ impl Div for Fixed {
     #[inline(always)]
     fn div(self, rhs: Self) -> Self {
         if rhs.0 == 0 {
-            return Fixed(i64::MAX); // Avoid division by zero
+            return Self(i64::MAX); // Avoid division by zero
         }
         // Scale up numerator before division
-        Fixed(((self.0 as i128 * SCALE as i128) / rhs.0 as i128) as i64)
+        Self(((self.0 as i128 * SCALE as i128) / rhs.0 as i128) as i64)
     }
 }
 
@@ -200,7 +200,7 @@ impl VivaldiCoord {
     /// Create from raw `SimdCoord`
     #[inline(always)]
     #[must_use]
-    pub fn from_simd(coord: SimdCoord) -> Self {
+    pub const fn from_simd(coord: SimdCoord) -> Self {
         Self {
             inner: coord,
             error: SCALE,
@@ -211,55 +211,55 @@ impl VivaldiCoord {
     /// Get inner `SimdCoord` (zero-cost)
     #[inline(always)]
     #[must_use]
-    pub fn as_simd(&self) -> &SimdCoord {
+    pub const fn as_simd(&self) -> &SimdCoord {
         &self.inner
     }
 
     /// Get mutable inner `SimdCoord`
     #[inline(always)]
-    pub fn as_simd_mut(&mut self) -> &mut SimdCoord {
+    pub const fn as_simd_mut(&mut self) -> &mut SimdCoord {
         &mut self.inner
     }
 
     /// Get x coordinate as Fixed
     #[inline(always)]
     #[must_use]
-    pub fn x(&self) -> Fixed {
+    pub const fn x(&self) -> Fixed {
         Fixed(self.inner.data[0] << 4)
     }
 
     /// Get y coordinate as Fixed
     #[inline(always)]
     #[must_use]
-    pub fn y(&self) -> Fixed {
+    pub const fn y(&self) -> Fixed {
         Fixed(self.inner.data[1] << 4)
     }
 
     /// Get z coordinate as Fixed
     #[inline(always)]
     #[must_use]
-    pub fn z(&self) -> Fixed {
+    pub const fn z(&self) -> Fixed {
         Fixed(self.inner.data[2] << 4)
     }
 
     /// Get height as Fixed
     #[inline(always)]
     #[must_use]
-    pub fn height(&self) -> Fixed {
+    pub const fn height(&self) -> Fixed {
         Fixed(self.inner.data[3] << 4)
     }
 
     /// Get error estimate as Fixed
     #[inline(always)]
     #[must_use]
-    pub fn error(&self) -> Fixed {
+    pub const fn error(&self) -> Fixed {
         Fixed(self.error)
     }
 
     /// Calculate Euclidean distance (excluding height)
     #[inline(always)]
     #[must_use]
-    pub fn euclidean_distance(&self, other: &Self) -> Fixed {
+    pub const fn euclidean_distance(&self, other: &Self) -> Fixed {
         let dist_scaled = self.inner.distance(&other.inner);
         Fixed(((dist_scaled as i128) << 4) as i64)
     }
@@ -268,7 +268,7 @@ impl VivaldiCoord {
     /// RTT = `Euclidean_Distance` + `Height_A` + `Height_B`
     #[inline(always)]
     #[must_use]
-    pub fn predict_rtt(&self, other: &Self) -> Fixed {
+    pub const fn predict_rtt(&self, other: &Self) -> Fixed {
         let rtt_scaled = self.inner.predict_rtt(&other.inner);
         Fixed(((rtt_scaled as i128) << 4) as i64)
     }
@@ -276,7 +276,7 @@ impl VivaldiCoord {
     /// Update coordinate based on measured RTT to a peer
     ///
     /// Uses Vivaldi spring-force algorithm with fused SIMD operations
-    pub fn update(&mut self, peer: &VivaldiCoord, measured_rtt: Fixed) {
+    pub fn update(&mut self, peer: &Self, measured_rtt: Fixed) {
         // measured_rtt is already in Fixed (SCALE) units
 
         // Predicted RTT (using fused SIMD) - use i128 to prevent overflow
@@ -386,7 +386,7 @@ impl VivaldiSystem {
 
     /// Create with initial coordinate
     #[must_use]
-    pub fn with_coord(coord: VivaldiCoord) -> Self {
+    pub const fn with_coord(coord: VivaldiCoord) -> Self {
         Self {
             local: coord,
             update_count: 0,
@@ -403,20 +403,20 @@ impl VivaldiSystem {
     /// Predict RTT to a remote node
     #[inline(always)]
     #[must_use]
-    pub fn predict_rtt(&self, remote: &VivaldiCoord) -> Fixed {
+    pub const fn predict_rtt(&self, remote: &VivaldiCoord) -> Fixed {
         self.local.predict_rtt(remote)
     }
 
     /// Get local coordinate
     #[inline(always)]
     #[must_use]
-    pub fn get_coord(&self) -> &VivaldiCoord {
+    pub const fn get_coord(&self) -> &VivaldiCoord {
         &self.local
     }
 
     /// Check if coordinate has stabilized
     #[must_use]
-    pub fn is_stable(&self) -> bool {
+    pub const fn is_stable(&self) -> bool {
         self.update_count > 10 && self.local.error < SCALE * 3 / 10
     }
 }
@@ -428,6 +428,7 @@ impl Default for VivaldiSystem {
 }
 
 #[cfg(test)]
+#[allow(clippy::float_cmp)]
 mod tests {
     use super::*;
 
@@ -513,9 +514,9 @@ mod tests {
         let pred_bc = sys_b.predict_rtt(&sys_c.local).to_f64();
 
         // Check reasonable range
-        assert!(pred_ab > 5.0 && pred_ab < 60.0, "A-B: {}", pred_ab);
-        assert!(pred_ac > 5.0 && pred_ac < 80.0, "A-C: {}", pred_ac);
-        assert!(pred_bc > 5.0 && pred_bc < 70.0, "B-C: {}", pred_bc);
+        assert!(pred_ab > 5.0 && pred_ab < 60.0, "A-B: {pred_ab}");
+        assert!(pred_ac > 5.0 && pred_ac < 80.0, "A-C: {pred_ac}");
+        assert!(pred_bc > 5.0 && pred_bc < 70.0, "B-C: {pred_bc}");
     }
 
     #[test]
@@ -611,7 +612,7 @@ mod tests {
     fn test_fixed_from_f64_roundtrip() {
         for &val in &[0.0, 1.0, -1.0, 3.125, 100.5, -999.9] {
             let f = Fixed::from_f64(val);
-            assert!((f.to_f64() - val).abs() < 0.01, "Failed for {}", val);
+            assert!((f.to_f64() - val).abs() < 0.01, "Failed for {val}");
         }
     }
 

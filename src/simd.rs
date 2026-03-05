@@ -91,7 +91,7 @@ impl SimdCoord {
     /// Result is in squared scaled units
     #[inline(always)]
     #[must_use]
-    pub fn distance_squared(&self, other: &Self) -> i64 {
+    pub const fn distance_squared(&self, other: &Self) -> i64 {
         let dx = self.data[0] - other.data[0];
         let dy = self.data[1] - other.data[1];
         let dz = self.data[2] - other.data[2];
@@ -109,7 +109,7 @@ impl SimdCoord {
     /// Result is in scaled units (divide by `COORD_SCALE` to get real value)
     #[inline(always)]
     #[must_use]
-    pub fn distance(&self, other: &Self) -> i64 {
+    pub const fn distance(&self, other: &Self) -> i64 {
         let dx = self.data[0] - other.data[0];
         let dy = self.data[1] - other.data[1];
         let dz = self.data[2] - other.data[2];
@@ -130,7 +130,7 @@ impl SimdCoord {
     /// RTT = distance + `height_self` + `height_other`
     #[inline(always)]
     #[must_use]
-    pub fn predict_rtt(&self, other: &Self) -> i64 {
+    pub const fn predict_rtt(&self, other: &Self) -> i64 {
         self.distance(other) + self.data[3] + other.data[3]
     }
 
@@ -278,7 +278,7 @@ impl Sub for SimdCoord {
 /// This is branchless-optimized and uses only integer operations.
 #[inline(always)]
 #[must_use]
-pub fn isqrt(n: u64) -> u64 {
+pub const fn isqrt(n: u64) -> u64 {
     if n < 2 {
         return n;
     }
@@ -303,7 +303,7 @@ pub fn isqrt(n: u64) -> u64 {
 /// Returns 1/sqrt(n) scaled by `COORD_SCALE`
 #[inline(always)]
 #[must_use]
-pub fn fast_inv_sqrt(n: i64) -> i64 {
+pub const fn fast_inv_sqrt(n: i64) -> i64 {
     if n <= 0 {
         return i64::MAX;
     }
@@ -352,6 +352,7 @@ pub fn find_nearest(origin: &SimdCoord, targets: &[SimdCoord]) -> Option<usize> 
 }
 
 #[cfg(test)]
+#[allow(clippy::float_cmp)]
 mod tests {
     use super::*;
 
@@ -362,11 +363,11 @@ mod tests {
 
         // Distance should be 5.0
         let dist = a.distance(&b) as f64 / COORD_SCALE as f64;
-        assert!((dist - 5.0).abs() < 0.1, "Distance: {}", dist);
+        assert!((dist - 5.0).abs() < 0.1, "Distance: {dist}");
 
         // RTT = 5 + 5 + 5 = 15
         let rtt = a.predict_rtt_ms(&b);
-        assert!((rtt - 15.0).abs() < 0.5, "RTT: {}", rtt);
+        assert!((rtt - 15.0).abs() < 0.5, "RTT: {rtt}");
     }
 
     #[test]
@@ -426,7 +427,7 @@ mod tests {
     #[test]
     fn test_alignment() {
         let coord = SimdCoord::new();
-        let ptr = &coord as *const SimdCoord as usize;
+        let ptr = &raw const coord as usize;
         assert_eq!(ptr % 32, 0, "Should be 32-byte aligned");
     }
 
@@ -554,7 +555,7 @@ mod tests {
         let b = SimdCoord::from_f64(0.0, 0.0, 0.0, 20.0);
         // Distance = 0, but RTT = 0 + height_a + height_b = 30
         let rtt_ms = a.predict_rtt_ms(&b);
-        assert!((rtt_ms - 30.0).abs() < 1.0, "RTT: {}", rtt_ms);
+        assert!((rtt_ms - 30.0).abs() < 1.0, "RTT: {rtt_ms}");
     }
 
     #[test]

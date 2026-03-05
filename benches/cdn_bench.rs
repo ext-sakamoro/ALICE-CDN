@@ -7,30 +7,30 @@ fn bench_simd_distance(c: &mut Criterion) {
     let b = SimdCoord::from_f64(51.5, -0.1, 0.0, 2.0);
 
     c.bench_function("simd_distance", |bench| {
-        bench.iter(|| black_box(a).distance(black_box(&b)))
+        bench.iter(|| black_box(a).distance(black_box(&b)));
     });
 }
 
 fn bench_batch_distances(c: &mut Criterion) {
     let origin = SimdCoord::from_f64(50.0, 100.0, 0.0, 1.0);
     let coords: Vec<SimdCoord> = (0..1000)
-        .map(|i| SimdCoord::from_f64(i as f64 * 0.1, i as f64 * 0.2, 0.0, 1.0))
+        .map(|i| SimdCoord::from_f64(f64::from(i) * 0.1, f64::from(i) * 0.2, 0.0, 1.0))
         .collect();
     let mut out = vec![0i64; 1000];
 
     c.bench_function("batch_distances_1000", |bench| {
-        bench.iter(|| batch_distances(black_box(&origin), black_box(&coords), &mut out))
+        bench.iter(|| batch_distances(black_box(&origin), black_box(&coords), &mut out));
     });
 }
 
 fn bench_find_nearest(c: &mut Criterion) {
     let coords: Vec<SimdCoord> = (0..1000)
-        .map(|i| SimdCoord::from_f64(i as f64 * 0.1, i as f64 * 0.2, 0.0, 1.0))
+        .map(|i| SimdCoord::from_f64(f64::from(i) * 0.1, f64::from(i) * 0.2, 0.0, 1.0))
         .collect();
     let query = SimdCoord::from_f64(50.0, 100.0, 0.0, 1.0);
 
     c.bench_function("find_nearest_of_1000", |bench| {
-        bench.iter(|| find_nearest(black_box(&query), black_box(&coords)))
+        bench.iter(|| find_nearest(black_box(&query), black_box(&coords)));
     });
 }
 
@@ -43,7 +43,7 @@ fn bench_maglev_lookup(c: &mut Criterion) {
         bench.iter(|| {
             key = key.wrapping_add(1);
             maglev.lookup(black_box(key))
-        })
+        });
     });
 }
 
@@ -53,13 +53,14 @@ fn bench_maglev_build(c: &mut Criterion) {
     for n_nodes in [10, 50, 100] {
         let nodes: Vec<u64> = (0..n_nodes).collect();
         group.bench_with_input(BenchmarkId::new("nodes", n_nodes), &nodes, |b, nodes| {
-            b.iter(|| MaglevHash::new(black_box(nodes.clone())))
+            b.iter(|| MaglevHash::new(black_box(nodes.clone())));
         });
     }
     group.finish();
 }
 
 fn bench_spatial_index(c: &mut Criterion) {
+    #[allow(clippy::cast_precision_loss)]
     let entries: Vec<SpatialEntry> = (0..1000u64)
         .map(|i| SpatialEntry {
             coord: SimdCoord::from_f64(i as f64 * 0.1, i as f64 * 0.2, 0.0, 1.0),
@@ -71,7 +72,7 @@ fn bench_spatial_index(c: &mut Criterion) {
     let query = SimdCoord::from_f64(50.0, 100.0, 0.0, 1.0);
 
     c.bench_function("spatial_nearest_k5_of_1000", |bench| {
-        bench.iter(|| index.find_nearest_k(black_box(&query), 5))
+        bench.iter(|| index.find_nearest_k(black_box(&query), 5));
     });
 }
 
@@ -80,7 +81,7 @@ fn bench_vivaldi_predict_rtt(c: &mut Criterion) {
     let b = VivaldiCoord::at(51.5, -0.1, 0.0, 2.0);
 
     c.bench_function("vivaldi_predict_rtt", |bench| {
-        bench.iter(|| a.predict_rtt(black_box(&b)))
+        bench.iter(|| a.predict_rtt(black_box(&b)));
     });
 }
 

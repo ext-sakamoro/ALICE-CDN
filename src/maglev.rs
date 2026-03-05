@@ -31,7 +31,7 @@ const EMPTY: u16 = u16::MAX;
 
 /// Maglev hash function 1 (offset)
 #[inline(always)]
-fn hash1(key: u64, table_size: usize) -> usize {
+const fn hash1(key: u64, table_size: usize) -> usize {
     const MUL: u64 = 0x9E37_79B9_7F4A_7C15; // Golden ratio prime
     ((key.wrapping_mul(MUL)) as usize) % table_size
 }
@@ -39,7 +39,7 @@ fn hash1(key: u64, table_size: usize) -> usize {
 /// Maglev hash function 2 (skip)
 /// Returns value in [1, table_size-1] to ensure coprimality with M
 #[inline(always)]
-fn hash2(key: u64, table_size: usize) -> usize {
+const fn hash2(key: u64, table_size: usize) -> usize {
     const MUL: u64 = 0x517C_C1B7_2722_0A95; // Different prime
     ((key.wrapping_mul(MUL)) as usize) % (table_size - 1) + 1
 }
@@ -225,14 +225,14 @@ impl MaglevHash {
     /// Get table size
     #[inline(always)]
     #[must_use]
-    pub fn table_size(&self) -> usize {
+    pub const fn table_size(&self) -> usize {
         self.table_size
     }
 
     /// Get memory usage in bytes
     #[inline(always)]
     #[must_use]
-    pub fn memory_usage(&self) -> usize {
+    pub const fn memory_usage(&self) -> usize {
         self.table.len() * 2 + self.nodes.len() * 8
     }
 
@@ -400,6 +400,7 @@ impl StaticMaglev {
 }
 
 #[cfg(test)]
+#[allow(clippy::float_cmp)]
 mod tests {
     use super::*;
 
@@ -439,9 +440,7 @@ mod tests {
             let diff = (*count as i64 - expected as i64).abs();
             assert!(
                 diff < expected as i64 / 2,
-                "Uneven distribution: {} vs expected {}",
-                count,
-                expected
+                "Uneven distribution: {count} vs expected {expected}"
             );
         }
     }
@@ -523,8 +522,7 @@ mod tests {
         let ratio = count1 as f64 / count2 as f64;
         assert!(
             ratio > 2.0 && ratio < 4.0,
-            "Expected ratio ~3, got {:.2}",
-            ratio
+            "Expected ratio ~3, got {ratio:.2}"
         );
     }
 
@@ -541,13 +539,13 @@ mod tests {
 
         // Check distribution is relatively even
         for &count in &h1_counts {
-            assert!(count > 50 && count < 150, "h1 uneven: {}", count);
+            assert!(count > 50 && count < 150, "h1 uneven: {count}");
         }
         // hash2 returns [1, table_size-1], so index 0 is always 0
         assert_eq!(h2_counts[0], 0, "h2 should never return 0");
         for &count in &h2_counts[1..] {
             // 10000 / 99 ≈ 101, allow wider range
-            assert!(count > 50 && count < 160, "h2 uneven: {}", count);
+            assert!(count > 50 && count < 160, "h2 uneven: {count}");
         }
     }
 
@@ -571,7 +569,7 @@ mod tests {
 
         // Should be roughly 2 * 65537 + 8 * 100 = ~131KB
         let usage = maglev.memory_usage();
-        assert!(usage < 150_000, "Memory usage: {}", usage);
+        assert!(usage < 150_000, "Memory usage: {usage}");
     }
 
     // --- Boundary tests ---
@@ -591,7 +589,7 @@ mod tests {
         let maglev = MaglevHash::with_table_size(nodes, SMALL_TABLE_SIZE);
         for key in 0..50u64 {
             if let Some(idx) = maglev.lookup_index(key) {
-                assert!(idx < 3, "Index out of range: {}", idx);
+                assert!(idx < 3, "Index out of range: {idx}");
             }
         }
     }
@@ -652,7 +650,7 @@ mod tests {
         let nodes = vec![1, 2, 3, 4, 5];
         let maglev = MaglevHash::with_table_size(nodes, SMALL_TABLE_SIZE);
         for key in 0..SMALL_TABLE_SIZE as u64 {
-            assert!(maglev.lookup(key).is_some(), "Key {} unassigned", key);
+            assert!(maglev.lookup(key).is_some(), "Key {key} unassigned");
         }
     }
 
