@@ -104,16 +104,20 @@ pub mod analytics_bridge;
 pub mod asp_bridge;
 #[cfg(feature = "cache")]
 pub mod cache_bridge;
+pub mod consistency;
 #[cfg(feature = "content_types")]
 pub mod content_types;
 #[cfg(feature = "crypto")]
 pub mod crypto_bridge;
 pub mod locator;
 pub mod maglev;
+pub mod replica;
 #[cfg(feature = "sdf")]
 pub mod sdf_cdn_bridge;
+pub mod sdf_router;
 pub mod simd;
 pub mod spatial;
+pub mod stream_router;
 pub mod vivaldi;
 
 // Re-export main types
@@ -125,6 +129,14 @@ pub use maglev::{
 pub use simd::{batch_distances, find_nearest, isqrt, SimdCoord};
 pub use spatial::{SpatialEntry, SpatialIndex, AABB};
 pub use vivaldi::{Fixed, VivaldiCoord, VivaldiSystem};
+
+// New modules
+pub use consistency::{CacheConsistency, ConsistencyConfig, EvictionPolicy};
+pub use replica::{
+    compute_placement, placement_imbalance, PlacementNode, PlacementResult, PlacementStrategy,
+};
+pub use sdf_router::{SdfCell, SdfRouter};
+pub use stream_router::{adapt_bitrate, QualityLevel, RelayCandidate, StreamRoute, StreamRouter};
 
 /// Library version
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
