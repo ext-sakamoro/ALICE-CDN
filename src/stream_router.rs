@@ -186,7 +186,8 @@ impl StreamRouter {
     fn score(&self, candidate: &RelayCandidate, max_rtt: f64, max_bw: u32) -> f64 {
         let latency_score = 1.0 - (candidate.total_rtt_ms() / max_rtt);
         let bw_score = f64::from(candidate.available_bandwidth_kbps()) / f64::from(max_bw);
-        self.latency_weight.mul_add(latency_score, self.bandwidth_weight * bw_score)
+        self.latency_weight
+            .mul_add(latency_score, self.bandwidth_weight * bw_score)
     }
 
     /// トップ K リレーを選択。

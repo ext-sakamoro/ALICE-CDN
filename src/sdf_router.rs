@@ -82,12 +82,7 @@ impl SdfCell {
         for dx in -1..=1 {
             for dy in -1..=1 {
                 for dz in -1..=1 {
-                    out.push(Self::new(
-                        self.x + dx,
-                        self.y + dy,
-                        self.z + dz,
-                        self.lod,
-                    ));
+                    out.push(Self::new(self.x + dx, self.y + dy, self.z + dz, self.lod));
                 }
             }
         }
