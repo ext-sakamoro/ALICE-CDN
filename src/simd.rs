@@ -10,7 +10,7 @@
 
 use core::ops::{Add, Sub};
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
 use core::arch::x86_64::*;
 
 /// Scale factor for fixed-point (2^16 for coordinate precision)
