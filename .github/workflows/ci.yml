@@ -134,4 +134,17 @@ jobs:
             echo "" > "../$dir/src/lib.rs"
           done
       - uses: dtolnay/rust-toolchain@stable
-      - run: cargo doc --no-deps 2>&1 | (! grep -i warning)
+      - run: cargo doc --no-deps
+        env:
+          RUSTDOCFLAGS: "-Dwarnings"
+
+  actionlint:
+    name: actionlint (workflow YAML 検証)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run actionlint
+        uses: reviewdog/action-actionlint@v1
+        with:
+          fail_level: error
+          reporter: github-check
