@@ -1,6 +1,6 @@
 # ALICE-CDN
 
-[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE)
+[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE-AGPL)
 [![Rust](https://img.shields.io/badge/rust-1.70%2B-orange.svg)](https://www.rust-lang.org)
 [![Tests](https://img.shields.io/badge/tests-142_passing-brightgreen.svg)](#quality)
 
@@ -366,19 +366,19 @@ let (hops, latency_ms) = estimate_delivery(&packet, &local_coord, &target_coord)
 
 ## License
 
-This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**.
+`AGPL-3.0 OR LicenseRef-Commercial` — dual-licensed. Pick either.
 
-### Commercial Licensing
+| Option | Terms | Use it when |
+|--------|-------|-------------|
+| **AGPL-3.0** | [LICENSE-AGPL](LICENSE-AGPL) — free, no reporting obligation | Your project is itself AGPL-compatible open source, or you are only using it internally |
+| **Commercial License** | [LICENSE-COMMERCIAL.md](LICENSE-COMMERCIAL.md) — paid, removes the copyleft | Closed-source product, proprietary SaaS, edge / firmware distribution, plugin redistribution, or a platform NDA that forbids source disclosure |
 
-For commercial use without AGPL obligations, please contact:
+AGPL is a strong copyleft: a product, firmware image, or service that links
+`alice-cdn` and is distributed or served to users must be released under the AGPL
+as well. That is intentional for the open ecosystem, and the Commercial
+License exists for the cases where it is not something you are able to do.
 
-**Extoria**
-- GitHub: [@ext-sakamoro](https://github.com/ext-sakamoro)
-
-We offer flexible commercial licensing options for businesses that need to:
-- Use ALICE-CDN in proprietary/closed-source applications
-- Distribute ALICE-CDN without source code disclosure
-- Integrate into SaaS products without AGPL compliance burden
+Commercial licence enquiries: <contact@extoria.co.jp>
 
 ## Author
 
