@@ -2,9 +2,9 @@
 name = "alice-cdn"
 version = "0.2.0"
 edition = "2021"
-authors = ["Moroya Sakamoto <sakamoro@alicelaw.net>"]
+authors = ["Moroya Sakamoto"]
 description = "Decentralized Latency-Optimized Content Delivery - Optimized Edition"
-license = "AGPL-3.0-only OR LicenseRef-Commercial"
+license = "LicenseRef-Proprietary"
 repository = "https://github.com/ext-sakamoro/ALICE-CDN"
 publish = false
 

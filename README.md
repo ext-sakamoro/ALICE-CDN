@@ -1,6 +1,6 @@
 # ALICE-CDN
 
-[![License: AGPL-3.0-only](https://img.shields.io/badge/License-AGPL--3.0--only-blue.svg)](LICENSE-AGPL)
+[![License](https://img.shields.io/badge/license-Proprietary-lightgrey)](LICENSE-Proprietary)
 [![Rust](https://img.shields.io/badge/rust-1.70%2B-orange.svg)](https://www.rust-lang.org)
 [![Tests](https://img.shields.io/badge/tests-142_passing-brightgreen.svg)](#quality)
 
@@ -366,19 +366,9 @@ let (hops, latency_ms) = estimate_delivery(&packet, &local_coord, &target_coord)
 
 ## License
 
-`AGPL-3.0-only OR LicenseRef-Commercial` — dual-licensed. Pick either.
+`LicenseRef-Proprietary`. The text is [LICENSE-Proprietary](LICENSE-Proprietary).
 
-| Option | Terms | Use it when |
-|--------|-------|-------------|
-| **AGPL-3.0-only** | [LICENSE-AGPL](LICENSE-AGPL) — free, no reporting obligation | Your project is itself AGPL-compatible open source, or you are only using it internally |
-| **Commercial License** | [LICENSE-COMMERCIAL.md](LICENSE-COMMERCIAL.md) — paid, removes the copyleft | Closed-source product, proprietary SaaS, edge / firmware distribution, plugin redistribution, or a platform NDA that forbids source disclosure |
-
-AGPL is a strong copyleft: a product, firmware image, or service that links
-`alice-cdn` and is distributed or served to users must be released under the AGPL
-as well. That is intentional for the open ecosystem, and the Commercial
-License exists for the cases where it is not something you are able to do.
-
-Commercial licence enquiries: <contact@extoria.co.jp>
+Enquiries: https://extoria.co.jp/
 
 ## Author
 
