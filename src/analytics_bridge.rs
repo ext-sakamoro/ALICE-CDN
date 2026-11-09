@@ -3,7 +3,8 @@
 //! Streaming metrics for CDN delivery: unique clients (HLL), latency quantiles (DDSketch),
 //! request frequency (CMS), anomaly detection.
 
-use alice_analytics::prelude::*;
+use alice_analytics::anomaly::MadDetector;
+use alice_analytics::sketch::{CountMinSketch, DDSketch, HyperLogLog, MergeError, Mergeable};
 
 /// CDN delivery metrics collector.
 pub struct CdnMetrics {
@@ -71,11 +72,30 @@ impl CdnMetrics {
     }
 
     /// Merge metrics from another node (distributed aggregation).
-    pub fn merge(&mut self, other: &CdnMetrics) {
-        self.unique_clients.merge(&other.unique_clients);
-        self.latency_sketch.merge(&other.latency_sketch);
-        self.request_freq.merge(&other.request_freq);
-        self.total_requests += other.total_requests;
+    ///
+    /// Each part is merged into a copy and the copies are kept only when every part merged, so a
+    /// refused merge leaves these metrics as they were.
+    ///
+    /// # Errors
+    ///
+    /// [`MergeError::Overflow`] when a count would pass `u64::MAX`, [`MergeError::Alpha`] when the
+    /// two latency sketches were made with different relative accuracies
+    pub fn merge(&mut self, other: &CdnMetrics) -> Result<(), MergeError> {
+        let total_requests = self
+            .total_requests
+            .checked_add(other.total_requests)
+            .ok_or(MergeError::Overflow)?;
+        let mut latency_sketch = self.latency_sketch.clone();
+        latency_sketch.merge(&other.latency_sketch)?;
+        let mut request_freq = self.request_freq.clone();
+        request_freq.merge(&other.request_freq)?;
+        let mut unique_clients = self.unique_clients.clone();
+        unique_clients.merge(&other.unique_clients)?;
+        self.latency_sketch = latency_sketch;
+        self.request_freq = request_freq;
+        self.unique_clients = unique_clients;
+        self.total_requests = total_requests;
+        Ok(())
     }
 }
 

@@ -5,6 +5,7 @@ All notable changes to ALICE-CDN will be documented in this file.
 ## [Unreleased]
 
 ### Changed
+- **Breaking:** `CdnMetrics::merge` は `Result<(), MergeError>` を返す (alice-analytics の `Mergeable::merge` に合わせる) 数が `u64::MAX` を超える合算と、latency の sketch の精度 (alpha) が違う合算は断り、metrics を変えない (各部分を写しで合算し、全部できた時だけ入れ替える) `analytics` feature の import は alice-analytics から消えた `prelude` でなく `sketch` / `anomaly` から取る (これまで `analytics` feature は alice-analytics の main に対して build できなかった) 試験 `analytics_bridge` の 2 本
 - Licence: `AGPL-3.0-only OR LicenseRef-Commercial` → `LicenseRef-Proprietary`
 - License の SPDX 識別子を非推奨の `AGPL-3.0` から `AGPL-3.0-only` に (`Cargo.toml` の `AGPL-3.0-only OR LicenseRef-Commercial`、README の badge と表記) 条文 (`LICENSE-AGPL` / `LICENSE-COMMERCIAL.md`) と利用条件は不変
 - CI: `ci.yml` は `ci/**` の branch と手動実行でも走る main の run は打ち切らず、`ci/**` の古い run は新しい run が来たら打ち切る
