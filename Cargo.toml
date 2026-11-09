@@ -23,7 +23,7 @@ sdf = ["std"]  # SDF-aware CDN routing (spatial cell → edge node)
 alice-cache = { git = "https://github.com/ext-sakamoro/ALICE-Cache", branch = "main", version = "0.2", optional = true }
 alice-analytics = { git = "https://github.com/ext-sakamoro/ALICE-Analytics", branch = "main", version = "0.7", optional = true, default-features = false, features = ["std"] }
 libasp = { git = "https://github.com/ext-sakamoro/ALICE-Streaming-Protocol", branch = "main", version = "1.1", optional = true, default-features = false }
-alice-crypto = { git = "https://github.com/ext-sakamoro/ALICE-Crypto", branch = "main", version = "0.6", optional = true, default-features = false, features = ["std"] }
+alice-crypto = { git = "https://github.com/ext-sakamoro/ALICE-Crypto", branch = "main", version = "0.7", optional = true, default-features = false, features = ["std"] }
 
 [profile.release]
 opt-level = 3

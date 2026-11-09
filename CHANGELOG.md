@@ -5,6 +5,7 @@ All notable changes to ALICE-CDN will be documented in this file.
 ## [Unreleased]
 
 ### Changed
+- 依存: alice-crypto を 0.7 に上げた (`std` の API は同じ、0.7 は module ごとの feature を足した版)
 - 依存: alice-analytics / alice-cache / libasp / alice-crypto を隣の path でなく各 repository の main branch と版で引く (Cargo.lock が commit を記録する) CI は隣を中身なしの stub に置き換えるのをやめ、bridge の feature (`analytics,cache,asp,crypto`) の test と clippy を足した (これまで bridge は CI で一度も compile されなかった) `scripts/preflight.sh` を同じ step で作り直した `cache_bridge.rs` の使わない import を外した
 - **Breaking:** `CdnMetrics::merge` は `Result<(), MergeError>` を返す (alice-analytics の `Mergeable::merge` に合わせる) 数が `u64::MAX` を超える合算と、latency の sketch の精度 (alpha) が違う合算は断り、metrics を変えない (各部分を写しで合算し、全部できた時だけ入れ替える) `analytics` feature の import は alice-analytics から消えた `prelude` でなく `sketch` / `anomaly` から取る (これまで `analytics` feature は alice-analytics の main に対して build できなかった) 試験 `analytics_bridge` の 2 本
 - Licence: `AGPL-3.0-only OR LicenseRef-Commercial` → `LicenseRef-Proprietary`
