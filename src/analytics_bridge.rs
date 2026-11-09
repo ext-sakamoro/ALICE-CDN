@@ -100,4 +100,51 @@ mod tests {
         assert!(m.p99_latency() > m.p50_latency());
         assert_eq!(m.total_requests, 100);
     }
+
+    fn sample(n: u64) -> CdnMetrics {
+        let mut m = CdnMetrics::new();
+        for i in 0..n {
+            m.record_delivery(i % 7, i % 3, 5.0 + (i as f64) * 0.5);
+        }
+        m
+    }
+
+    // oracle: the merge of two nodes is the same as recording both nodes' deliveries on one
+    #[test]
+    fn merging_two_nodes_adds_their_requests() {
+        let mut a = sample(40);
+        a.merge(&sample(60)).unwrap();
+        assert_eq!(a.total_requests, 100);
+        assert_eq!(a.latency_sketch.count(), 100);
+    }
+
+    // a merge that would overflow the request count, or mixes two latency resolutions, is refused
+    // and leaves the metrics as they were
+    #[test]
+    fn a_merge_that_cannot_be_made_changes_nothing() {
+        let mut a = sample(10);
+        a.total_requests = u64::MAX;
+        let before = (
+            a.total_requests,
+            a.latency_sketch.count(),
+            a.p50_latency().to_bits(),
+        );
+        assert_eq!(a.merge(&sample(5)), Err(MergeError::Overflow));
+        assert_eq!(
+            (
+                a.total_requests,
+                a.latency_sketch.count(),
+                a.p50_latency().to_bits()
+            ),
+            before
+        );
+
+        let mut b = sample(10);
+        let mut other = sample(5);
+        other.latency_sketch = DDSketch::new(0.05);
+        other.latency_sketch.insert(3.0);
+        let before = (b.total_requests, b.latency_sketch.count());
+        assert_eq!(b.merge(&other), Err(MergeError::Alpha));
+        assert_eq!((b.total_requests, b.latency_sketch.count()), before);
+    }
 }
