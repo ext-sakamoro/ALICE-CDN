@@ -7,7 +7,7 @@
 //! Client → CDN (Vivaldi route) → Cache (hit?) → Origin (miss)
 //! ```
 
-use crate::{ContentLocator, MaglevHash, VivaldiCoord};
+use crate::{MaglevHash, VivaldiCoord};
 use alice_cache::{AliceCache, CacheConfig};
 
 /// CDN node with integrated local cache.

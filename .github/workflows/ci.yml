@@ -18,27 +18,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - name: Create dependency stubs
-        run: |
-          for crate_info in \
-            "ALICE-Cache:alice-cache" \
-            "ALICE-Analytics:alice-analytics" \
-            "ALICE-Streaming-Protocol:libasp" \
-            "ALICE-Crypto:alice-crypto"; do
-            dir=$(echo "$crate_info" | cut -d: -f1)
-            pkg=$(echo "$crate_info" | cut -d: -f2)
-            mkdir -p "../$dir/src"
-            cat > "../$dir/Cargo.toml" << TOML
-          [package]
-          name = "$pkg"
-          version = "0.1.0"
-          edition = "2021"
-          [features]
-          default = []
-          std = []
-          TOML
-            echo "" > "../$dir/src/lib.rs"
-          done
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo test --lib --tests
       - run: cargo test --doc
@@ -47,61 +26,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - name: Create dependency stubs
-        run: |
-          for crate_info in \
-            "ALICE-Cache:alice-cache" \
-            "ALICE-Analytics:alice-analytics" \
-            "ALICE-Streaming-Protocol:libasp" \
-            "ALICE-Crypto:alice-crypto"; do
-            dir=$(echo "$crate_info" | cut -d: -f1)
-            pkg=$(echo "$crate_info" | cut -d: -f2)
-            mkdir -p "../$dir/src"
-            cat > "../$dir/Cargo.toml" << TOML
-          [package]
-          name = "$pkg"
-          version = "0.1.0"
-          edition = "2021"
-          [features]
-          default = []
-          std = []
-          TOML
-            echo "" > "../$dir/src/lib.rs"
-          done
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo test --features content_types
       - run: cargo test --features sdf
+      # the bridges to alice-analytics / alice-cache / libasp / alice-crypto (git, branch main;
+      # the lock records the commit)
+      - name: Test (ALICE bridges)
+        run: cargo test --features analytics,cache,asp,crypto --lib --tests
 
   clippy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - name: Create dependency stubs
-        run: |
-          for crate_info in \
-            "ALICE-Cache:alice-cache" \
-            "ALICE-Analytics:alice-analytics" \
-            "ALICE-Streaming-Protocol:libasp" \
-            "ALICE-Crypto:alice-crypto"; do
-            dir=$(echo "$crate_info" | cut -d: -f1)
-            pkg=$(echo "$crate_info" | cut -d: -f2)
-            mkdir -p "../$dir/src"
-            cat > "../$dir/Cargo.toml" << TOML
-          [package]
-          name = "$pkg"
-          version = "0.1.0"
-          edition = "2021"
-          [features]
-          default = []
-          std = []
-          TOML
-            echo "" > "../$dir/src/lib.rs"
-          done
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
       - run: cargo clippy --lib --tests -- -W clippy::all -D warnings
       - run: cargo clippy --features content_types --lib --tests -- -W clippy::all -D warnings
+      - name: Clippy (ALICE bridges)
+        run: cargo clippy --features analytics,cache,asp,crypto --lib --tests -- -W clippy::all -D warnings
 
   fmt:
     runs-on: ubuntu-latest
@@ -116,27 +59,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - name: Create dependency stubs
-        run: |
-          for crate_info in \
-            "ALICE-Cache:alice-cache" \
-            "ALICE-Analytics:alice-analytics" \
-            "ALICE-Streaming-Protocol:libasp" \
-            "ALICE-Crypto:alice-crypto"; do
-            dir=$(echo "$crate_info" | cut -d: -f1)
-            pkg=$(echo "$crate_info" | cut -d: -f2)
-            mkdir -p "../$dir/src"
-            cat > "../$dir/Cargo.toml" << TOML
-          [package]
-          name = "$pkg"
-          version = "0.1.0"
-          edition = "2021"
-          [features]
-          default = []
-          std = []
-          TOML
-            echo "" > "../$dir/src/lib.rs"
-          done
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo doc --no-deps
         env:
