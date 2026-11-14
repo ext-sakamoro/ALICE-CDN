@@ -128,7 +128,7 @@ fn place_latency_optimal(
             } else {
                 clients
                     .iter()
-                    .map(|c| (dist_sq(n.coord, *c) as f64).sqrt())
+                    .map(|c| alice_det_math::sqrt64(dist_sq(n.coord, *c) as f64))
                     .sum()
             };
             (n.id, total_dist)
@@ -148,7 +148,7 @@ fn place_load_balanced(nodes: &[&PlacementNode], count: usize) -> PlacementResul
     let mut scored: Vec<(u64, f64)> = nodes
         .iter()
         .map(|n| {
-            let score = (1.0 - n.availability()).mul_add(100.0, f64::from(n.load));
+            let score = (1.0 - n.availability()) * 100.0 + f64::from(n.load);
             (n.id, score)
         })
         .collect();
@@ -216,7 +216,7 @@ fn place_geographic(nodes: &[&PlacementNode], count: usize) -> PlacementResult {
             })
             .min()
             .unwrap_or(1);
-        1.0 / (min_pair_dist as f64).sqrt().max(1.0)
+        1.0 / alice_det_math::sqrt64(min_pair_dist as f64).max(1.0)
     } else {
         0.0
     };
@@ -238,7 +238,7 @@ pub fn placement_imbalance(nodes: &[PlacementNode]) -> f64 {
         return 0.0;
     }
     let variance = loads.iter().map(|l| (l - mean) * (l - mean)).sum::<f64>() / loads.len() as f64;
-    variance.sqrt() / mean // 変動係数
+    alice_det_math::sqrt64(variance) / mean // 変動係数
 }
 
 // ============================================================================

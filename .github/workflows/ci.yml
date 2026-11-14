@@ -22,6 +22,19 @@ jobs:
       - run: cargo test --lib --tests
       - run: cargo test --doc
 
+  # the library without std (`default-features = false`, as ALICE-Manga takes it): a bare-metal target has no std,
+  # so a std-only call (`f64::sqrt`, `vec!` without the alloc import) fails here instead of in a consumer
+  no-std:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      # into the toolchain rust-toolchain.toml pins (the action's `targets:` would go to stable)
+      - name: Add the bare-metal target
+        run: rustup target add thumbv7em-none-eabihf
+      - name: Build without std
+        run: cargo build --locked --lib --no-default-features --target thumbv7em-none-eabihf
+
   test-features:
     runs-on: ubuntu-latest
     steps:

@@ -14,7 +14,7 @@ use crate::locator::NodeId;
 use crate::simd::SimdCoord;
 
 #[cfg(not(feature = "std"))]
-use alloc::vec::Vec;
+use alloc::{vec, vec::Vec};
 
 /// Maximum items per leaf before splitting
 const BUCKET_SIZE: usize = 16;

@@ -109,6 +109,7 @@ pub mod consistency;
 pub mod content_types;
 #[cfg(feature = "crypto")]
 pub mod crypto_bridge;
+pub mod det_math_pins;
 pub mod locator;
 pub mod maglev;
 pub mod replica;

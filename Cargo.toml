@@ -10,7 +10,7 @@ publish = false
 
 [features]
 default = ["std"]
-std = []
+std = ["alice-det-math/std"]
 content_types = []  # Content type awareness (ASDF, Mesh, Texture, Audio)
 cache = ["dep:alice-cache"]      # ALICE-Cache edge-node caching integration
 analytics = ["dep:alice-analytics"]  # ALICE-Analytics delivery metrics
@@ -19,6 +19,8 @@ crypto = ["dep:alice-crypto", "std"]  # ALICE-Crypto content encryption (DRM, si
 sdf = ["std"]  # SDF-aware CDN routing (spatial cell → edge node)
 
 [dependencies]
+# deterministic float functions with the same bits with and without std (sqrt64 / powi64 / floor64)
+alice-det-math = { git = "https://github.com/ext-sakamoro/ALICE-DetMath", branch = "main", version = "0.6", default-features = false }
 # ALICE Ecosystem (optional): each sibling's main branch, the lock records the commit
 alice-cache = { git = "https://github.com/ext-sakamoro/ALICE-Cache", branch = "main", version = "0.2", optional = true }
 alice-analytics = { git = "https://github.com/ext-sakamoro/ALICE-Analytics", branch = "main", version = "0.7", optional = true, default-features = false, features = ["std"] }

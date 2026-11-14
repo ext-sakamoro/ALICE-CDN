@@ -6,7 +6,7 @@
 # Run `--quick` before every push.
 #
 # usage: scripts/preflight.sh [--quick]   (--quick skips the test / bench suites)
-# generator rev 3144a7f8709082360b591d89edfb2344eeb3603d
+# generator rev a435b0d5d7655af2500185f73eb99726c67cee8e
 set -euo pipefail
 cd "$(dirname "$0")/.."
 # --- heavy slot (begin) ---
@@ -191,15 +191,21 @@ heavy_slot_acquire() {
     };
     my $me = $name->();
     my $ticket = "$q/$me";
-    open(my $tf, ">", $ticket) or do { print "error $!\n"; exit 2 }; close $tf;
-    END { unlink $ticket if defined $ticket }
+    open(my $tf, ">", $ticket) or do { print "error $!\n"; exit 2 }; print $tf ($label // ""), "\n"; close $tf;
+    # a waiter the disk holds (its own admission failed) says so beside its ticket: `.disk-<ticket>`, the reason,
+    # refreshed at each ask; a waiter behind waiters that are all disk-held may take a free slot when its own
+    # admission passes (2026-11-10: a head reserving 30.8 GiB of 25.5 free held 5 fitting waiters for 3 h); the head
+    # keeps its place: it clears its marker as soon as the disk fits, and then nobody behind it may pass
+    my $mark = sub { "$q/.disk-$me" };
+    my $clear = sub { unlink $mark->() };
+    END { unlink $ticket if defined $ticket; unlink "$q/.disk-$me" if defined $me }
     my @fh;
     for my $k (0 .. $n - 1) { open($fh[$k], ">>", "$dir/$lock$k") or do { print "error $!\n"; exit 2 } }
     print "pid $$\n";
     my $start = time; my $note = 0; my $best; my $moved = time;
     while (1) {
       my $want = $name->();
-      if ($want ne $me && rename($ticket, "$q/$want")) { $me = $want; $ticket = "$q/$me" }
+      if ($want ne $me && rename($ticket, "$q/$want")) { $clear->(); $me = $want; $ticket = "$q/$me" }
       opendir(my $dh, $q) or do { print "error $!\n"; exit 2 };
       my @live;
       for my $t (sort grep { /^\d/ } readdir $dh) {
@@ -208,14 +214,20 @@ heavy_slot_acquire() {
       }
       closedir $dh;
       my ($place) = grep { $live[$_] eq $me } 0 .. $#live;
-      if (defined $place && $place == 0 && defined $dscript && $dscript ne "" && time - $dlast >= 5) {
+      # may ask for a slot: the head, or a waiter every one before which is held by the disk (a marker fresher than
+      # 15 s; a copy of this block from before the markers writes none, so nobody passes it)
+      my $eligible = defined $place && ($place == 0 || ($dscript ne "" && !grep {
+        my $m = (stat("$q/.disk-$live[$_]"))[9]; !defined $m || time - $m > 15 } 0 .. $place - 1));
+      if (!$eligible && !$dok) { ($dok, $dlast) = (1, 0); $clear->() }  # (passed by: asks again when it may)
+      if ($eligible && defined $dscript && $dscript ne "" && time - $dlast >= 5) {
         $dwhy = `python3 "$dscript" admit "$dir" "$dkey" 2>&1`; $dok = ($? == 0); $dlast = time; chomp $dwhy;
+        if ($dok) { $clear->() } elsif (open(my $mf, ">", $mark->() . ".tmp")) { print $mf "$dwhy\n"; close $mf; rename $mark->() . ".tmp", $mark->() }
         $moved = time if !$dok;  # (waiting for disk is not a stalled queue: the head does not give up for it)
       }
-      if (defined $place && $place == 0 && $dok) {
+      if ($eligible && $dok) {
         for my $k (0 .. $n - 1) {
           next unless flock($fh[$k], LOCK_EX | LOCK_NB);
-          unlink $ticket; undef $ticket; unlink $res if $res ne "";
+          $clear->(); unlink $ticket; undef $ticket; unlink $res if $res ne "";
           $0 = "alice-heavy-slot $title slot=$k holder=$parent dirhex=" . unpack("H*", $dir) . " end";
           print "held $k\n"; close(STDOUT);
           sleep 1 while getppid() == $parent;
@@ -225,8 +237,8 @@ heavy_slot_acquire() {
       my $w = int(time - $start);
       if ($class eq "work" && $w >= $age) { $class = "land (promoted)" }  # (renamed at the next poll)
       if (defined $place && (!defined $best || $place < $best)) { $best = $place; $moved = time }
-      if ($w >= $limit) { unlink $res if $res ne ""; print "timeout\n"; exit 1 }
-      if (time - $moved >= $stall) { unlink $res if $res ne ""; print "stalled\n"; exit 1 }
+      if ($w >= $limit) { unlink $res if $res ne ""; $clear->(); print "timeout\n"; exit 1 }
+      if (time - $moved >= $stall) { unlink $res if $res ne ""; $clear->(); print "stalled\n"; exit 1 }
       if ($res ne "" && time - $touched >= 30) { utime(undef, undef, $res); $touched = time }
       if ($w >= $note) { printf "wait %d %d %s%s\n", ($place // 0) + 1, $w, $class, $dok ? "" : " disk"; $note += 60 }
       sleep 0.2;
@@ -240,7 +252,7 @@ heavy_slot_acquire() {
         set -- $line
         case "$2" in 1) k=1st ;; 2) k=2nd ;; 3) k=3rd ;; *) k="$2th" ;; esac
         if [ "${6:-${5:-}}" = disk ]; then
-          echo "heavy slot: first in the queue, waiting for disk space ($3 s): $(python3 "$dscript" admit "$d" "$dkey" 2>&1)" >&2
+          echo "heavy slot: $k in the queue, waiting for disk space ($3 s): $(python3 "$dscript" admit "$d" "$dkey" 2>&1)" >&2
         else
           echo "heavy slot: waiting ($k in the queue, $3 s) for $(heavy_slot_holders "$d"); ${pool} slot, as $4${5:+ $5}" >&2
         fi
@@ -355,7 +367,7 @@ heavy_slot_record_kill() {
   [ -n "${HEAVY_SLOT_TAKE_ROOT:-}" ] || return 0
   if printf '%s\n' "$1" | awk -v r="$HEAVY_SLOT_TAKE_ROOT" '$1 == r { found = 1 } END { exit !found }'; then
     heavy_slot_record_take 137 "$2"
-    rm -f "${HEAVY_SLOT_PEAK_FILE:-}" "${HEAVY_SLOT_PEAK_FILE:-}.note" "${HEAVY_SLOT_PEAK_FILE:-}.done" 2>/dev/null || true
+    rm -f "${HEAVY_SLOT_PEAK_FILE:-}" "${HEAVY_SLOT_PEAK_FILE:-}.note" 2>/dev/null || true
   elif [ -n "${HEAVY_SLOT_PEAK_FILE:-}" ]; then
     # the recording take outlives this kill and records at its exit: leave it the reason
     printf '%s\n' "$2" > "$HEAVY_SLOT_PEAK_FILE.note" 2>/dev/null || true
@@ -365,6 +377,9 @@ heavy_slot_record_kill() {
 heavy_slot_note_peak() {
   local f=${HEAVY_SLOT_PEAK_FILE:-} old
   [ -n "$f" ] || return 0
+  # a watcher still sampling after the take recorded would make the peak file again, and the lost-take recorder would
+  # then write a second row for the same take (2026-11-14: takes.tsv had each take twice, the second "lost")
+  [ -e "$f.done" ] && return 0
   old=$(cat "$f" 2>/dev/null) || old=0
   case "$old" in '' | *[!0-9]*) old=0 ;; esac
   if [ "$1" -gt "$old" ]; then printf '%s\n' "$1" > "$f" 2>/dev/null || true; fi
@@ -565,7 +580,17 @@ step() { printf '\n\033[1;34m== %s\033[0m\n' "$*"; }
 relint() { git ls-files | grep -E '(^|/)src/(lib|main)\.rs$' | xargs -r touch; }
 need() { command -v "$1" >/dev/null 2>&1 || { echo "missing tool: $1 ($2)" >&2; exit 1; }; }
 
+# Steps CI runs that this file cannot reproduce locally (they can only fail remotely):
+#   - ci.yml:no-std:Add the bare-metal target (no cargo / grep)
+
 need actionlint "brew install actionlint"
+
+step "ci.yml / no-std: Build without std"
+(
+  gh_step ci.yml.no-std
+grep -q '^thumbv7em-none-eabihf$' <<<"$(rustup target list --installed)" || rustup target add thumbv7em-none-eabihf
+( export CARGO_TERM_COLOR="always"; cargo build --locked --lib --no-default-features --target thumbv7em-none-eabihf )
+)
 
 step "ci.yml / clippy: run"
 (
