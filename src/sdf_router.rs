@@ -32,9 +32,9 @@ impl SdfCell {
     pub fn from_world(wx: f64, wy: f64, wz: f64, cell_size: f64, lod: u8) -> Self {
         let scale = cell_size * f64::from(1u32 << u32::from(lod));
         Self {
-            x: (wx / scale).floor() as i32,
-            y: (wy / scale).floor() as i32,
-            z: (wz / scale).floor() as i32,
+            x: alice_det_math::floor64(wx / scale) as i32,
+            y: alice_det_math::floor64(wy / scale) as i32,
+            z: alice_det_math::floor64(wz / scale) as i32,
             lod,
         }
     }

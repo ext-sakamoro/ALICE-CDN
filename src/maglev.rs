@@ -18,7 +18,7 @@
 use crate::locator::NodeId;
 
 #[cfg(not(feature = "std"))]
-use alloc::vec::Vec;
+use alloc::{vec, vec::Vec};
 
 /// Default lookup table size (must be prime for good distribution)
 pub const DEFAULT_TABLE_SIZE: usize = 65537;
@@ -261,10 +261,10 @@ impl MaglevHash {
         let mean = self.table_size as f64 / self.nodes.len() as f64;
         let variance: f64 = counts
             .iter()
-            .map(|&c| (c as f64 - mean).powi(2))
+            .map(|&c| alice_det_math::powi64(c as f64 - mean, 2))
             .sum::<f64>()
             / self.nodes.len() as f64;
-        let std_dev = variance.sqrt();
+        let std_dev = alice_det_math::sqrt64(variance);
 
         DistributionStats {
             node_counts: counts,

@@ -262,8 +262,8 @@ impl CacheConsistency {
                 self.entries
                     .iter()
                     .min_by(|(_, a), (_, b)| {
-                        let score_a = (a.access_count as f64).mul_add(0.5, a.last_access * 0.5);
-                        let score_b = (b.access_count as f64).mul_add(0.5, b.last_access * 0.5);
+                        let score_a = (a.access_count as f64) * 0.5 + a.last_access * 0.5;
+                        let score_b = (b.access_count as f64) * 0.5 + b.last_access * 0.5;
                         score_a
                             .partial_cmp(&score_b)
                             .unwrap_or(core::cmp::Ordering::Equal)

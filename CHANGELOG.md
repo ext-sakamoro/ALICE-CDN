@@ -4,6 +4,11 @@ All notable changes to ALICE-CDN will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+- `default-features = false` (no_std) で build できなかった (19 error) のを直した: `maglev` / `spatial` に `alloc::vec` の macro の import を足し、std にしか無い `f64` の method を `alice-det-math` の関数に置き換えた (`sqrt` → `sqrt64`、`powi` → `powi64`、`floor` → `floor64`、どれも std の結果と bit で同じ) `mul_add` は掛けて足す形にした (std と no_std で同じ式) 影響: `StreamRouter` の候補の点数 (`latency_weight * latency + bandwidth_weight * bandwidth`) は融合しない丸めになり、標本 200000 件のうち 33537 件で最後の 1 bit が変わる (例: 0.33859612686793616 → 0.3385961268679361) `CacheConsistency` の退避の点数は変わらない (0.5 倍は厳密)、`compute_placement` の点数は標本で差 0 試験は全て通る (176 + 1)
+- 依存: `alice-det-math` (main、`default-features = false`、`std` feature で `alice-det-math/std`) `src/det_math_pins.rs` に呼ぶ 3 関数の識別子を固定し、解決した版で変わると compile が止まる
+- CI: `no-std` job (thumbv7em-none-eabihf で `--no-default-features` の lib を build) を足し、`scripts/preflight.sh` を作り直した
+
 ### Changed
 - 依存: alice-crypto を 0.7 に上げた (`std` の API は同じ、0.7 は module ごとの feature を足した版)
 - 依存: alice-analytics / alice-cache / libasp / alice-crypto を隣の path でなく各 repository の main branch と版で引く (Cargo.lock が commit を記録する) CI は隣を中身なしの stub に置き換えるのをやめ、bridge の feature (`analytics,cache,asp,crypto`) の test と clippy を足した (これまで bridge は CI で一度も compile されなかった) `scripts/preflight.sh` を同じ step で作り直した `cache_bridge.rs` の使わない import を外した
